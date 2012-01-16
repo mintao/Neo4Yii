@@ -1,50 +1,21 @@
 <?php
 
-class ENeo4jBatchTransaction extends EActiveResource
+class ENeo4jBatchTransaction
 {
-    private $_connection;
     
     public $instances=array(); //this is an array of instances used within the transaction
     public $operations=array();
-
-    public static function model($className=__CLASS__)
-    {
-        return parent::model($className);
-    }
-
-    /**
-     * We use the rest() function of the graphService object. Define necessary changes there.
-     */
-    public function rest()
-    {
-        return CMap::mergeArray(
-            $this->getConnection()->rest(),
-            array('resource'=>'batch')
-        );
-    }
     
-    public function routes()
+    private $_connection;
+    
+    public function __construct(EActiveResourceConnection $connection)
     {
-        return CMap::mergeArray(
-                parent::routes(),
-                array(
-                    'resource'=>':site/:resource'
-                )
-        );
+        $this->_connection=$connection;
     }
     
     public function getConnection()
     {
-        if(isset(self::$_connection))
-                return self::$_connection;
-        else
-        {
-            self::$_connection=Yii::app()->getComponent('neo4j');
-            if(self::$_connection instanceof EActiveResourceConnection)
-                return self::$_connection;
-            else
-                throw new EActiveResourceException('No "neo4j" component specified!');
-        }
+        return $this->_connection;
     }
     
     /**
@@ -82,7 +53,7 @@ class ENeo4jBatchTransaction extends EActiveResource
                 $this->operations[]=array(
                     'method'=>'POST',
                     'to'=>'/'.$propertyContainer->getResource(),
-                    'body'=>$propertyContainer->getAttributes(),
+                    'body'=>$propertyContainer->getAttributesToSend(),
                     'id'=>$propertyContainer->batchId
                 );
             break;
@@ -103,7 +74,7 @@ class ENeo4jBatchTransaction extends EActiveResource
                         'body'=>array(
                             'to'=>'{'.$endNodeBatchId.'}',
                             'type'=>$propertyContainer->type,
-                            'data'=>$propertyContainer->getAttributes(),
+                            'data'=>$propertyContainer->getAttributesToSend(),
                         ),
                         'id'=>$propertyContainer->batchId,);
                 }
@@ -115,7 +86,7 @@ class ENeo4jBatchTransaction extends EActiveResource
                         'body'=>array(
                             'to'=>$propertyContainer->endNode->self,
                             'type'=>$propertyContainer->type,
-                            'data'=>$propertyContainer->getAttributes(),
+                            'data'=>$propertyContainer->getAttributesToSend(),
                         ),
                         'id'=>$propertyContainer->batchId,);
                 }
@@ -127,7 +98,7 @@ class ENeo4jBatchTransaction extends EActiveResource
                         'body'=>array(
                             'to'=>'{'.$endNodeBatchId.'}',
                             'type'=>$propertyContainer->type,
-                            'data'=>$propertyContainer->getAttributes(),
+                            'data'=>$propertyContainer->getAttributesToSend(),
                         ),
                         'id'=>$propertyContainer->batchId,);
                 }
@@ -139,7 +110,7 @@ class ENeo4jBatchTransaction extends EActiveResource
                         'body'=>array(
                             'to'=>$propertyContainer->endNode->self,
                             'type'=>$propertyContainer->type,
-                            'data'=>$propertyContainer->getAttributes(),
+                            'data'=>$propertyContainer->getAttributesToSend(),
                         ),
                         'id'=>$propertyContainer->batchId,
                         );
@@ -185,9 +156,14 @@ class ENeo4jBatchTransaction extends EActiveResource
                     $instance->assignBatchId(null);
                 }
                 
-                $response=$this->postRequest('resource',$this->operations);
+                $request=new EActiveResourceRequest;
+                $request->setUri($this->getConnection()->site.'/batch');
+                $request->setMethod('POST');
+                $request->setData($this->operations);
+                
+                $response=$this->getConnection()->execute($request);
 
-                foreach($response as $resp)
+                foreach($response->getData() as $resp)
                 {
                     //we check if any id that is coming back is connected to a propertyContainer in our instances array.
                     //If so we update the object and assign the idProperty (=self)

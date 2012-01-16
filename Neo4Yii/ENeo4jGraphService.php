@@ -1,39 +1,24 @@
 <?php
-/**
- * @author Johannes "Haensel" Bauer
- * @since version 0.1
- * @version 0.1
- */
-
-/**
- * ENeo4jGraphService provides some basic information about how the client is able to connect to the graph service
- * All parameters used in rest() are used by the classes extending ENeo4jPropertyContainer and ENeo4jIndex so don't
- * mess around with it unless you know what you are doing
- */
 class ENeo4jGraphService extends EActiveResourceConnection
 {      
     
-    public $host;
-    public $port;
-    public $db;
-    
-    public function rest()
+    public $host='localhost';
+    public $port='7474';
+    public $db='db/data';
+    public $contentType="application/json";
+    public $acceptType="application/json";
+    public $allowNullValues=false;
+        
+    public function init()
     {
-        return array(
-            'site'=>$this->host.':'.$this->port.'/'.$this->db,
-            'accepttype'=>'application/json',
-            'contenttype'=>'application/json',
-            'idProperty'=>'id',
-            'resource'=>'',
-        );
-    }
-    
-    public function getConnectionString()
-    {
-        $rest=$this->rest();
-        return $rest['site'];
+        parent::init();
+        $this->site=$this->host.':'.$this->port.'/'.$this->db;
     }
 
+    /**
+     * Creates an ENeo4jBatchTransaction used with this connection
+     * @return ENeo4jBatchTransaction the transaction object
+     */
     public function createBatchTransaction()
     {
         return new ENeo4jBatchTransaction($this);
@@ -42,19 +27,13 @@ class ENeo4jGraphService extends EActiveResourceConnection
     public function queryByGremlin(EGremlinScript $gremlin)
     {
         Yii::trace(get_class($this).'.queryByGremlin()','ext.Neo4Yii.ENeo4jGraphService');
-        
         $request=new EActiveResourceRequest;
-        $request->setContentType('application/json');
-        $request->setAcceptType('application/json');
-        $request->setUri($this->getConnectionString().'/ext/GremlinPlugin/graphdb/execute_script');
+        $request->setUri($this->site.'/ext/GremlinPlugin/graphdb/execute_script');
         $request->setMethod('POST');
         $request->setData(array('script'=>$gremlin->toString()));
-        $response=$this->sendRequest($request);
+        $response=$this->query($request);
 
         return $response;
-    }
-    
-            
+    }          
 }
-
 ?>
