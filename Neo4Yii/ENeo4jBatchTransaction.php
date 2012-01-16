@@ -163,7 +163,7 @@ class ENeo4jBatchTransaction
                 
                 $response=$this->getConnection()->execute($request);
 
-                foreach($response as $resp)
+                foreach($response->getData() as $resp)
                 {
                     //we check if any id that is coming back is connected to a propertyContainer in our instances array.
                     //If so we update the object and assign the idProperty (=self)
