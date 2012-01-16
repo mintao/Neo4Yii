@@ -1,40 +1,21 @@
 <?php
 
-class ENeo4jBatchTransaction extends EActiveResource
+class ENeo4jBatchTransaction
 {
     
     public $instances=array(); //this is an array of instances used within the transaction
     public $operations=array();
-
-    public static function model($className=__CLASS__)
+    
+    private $_connection;
+    
+    public function __construct(EActiveResourceConnection $connection)
     {
-        return parent::model($className);
-    }
-
-    /**
-     * We use the rest() function of the graphService object. Define necessary changes there.
-     */
-    public function rest()
-    {
-        return CMap::mergeArray(
-            parent::rest(),
-            array('resource'=>'batch')
-        );
+        $this->_connection=$connection;
     }
     
-    public function routes()
+    public function getConnection()
     {
-        return CMap::mergeArray(
-                parent::routes(),
-                array(
-                    'resource'=>':site/:resource'
-                )
-        );
-    }
-
-    public function connectionName()
-    {
-        return 'neo4j';
+        return $this->_connection;
     }
     
     /**
@@ -72,7 +53,7 @@ class ENeo4jBatchTransaction extends EActiveResource
                 $this->operations[]=array(
                     'method'=>'POST',
                     'to'=>'/'.$propertyContainer->getResource(),
-                    'body'=>$propertyContainer->getAttributes(),
+                    'body'=>$propertyContainer->getAttributesToSend(),
                     'id'=>$propertyContainer->batchId
                 );
             break;
@@ -93,7 +74,7 @@ class ENeo4jBatchTransaction extends EActiveResource
                         'body'=>array(
                             'to'=>'{'.$endNodeBatchId.'}',
                             'type'=>$propertyContainer->type,
-                            'data'=>$propertyContainer->getAttributes(),
+                            'data'=>$propertyContainer->getAttributesToSend(),
                         ),
                         'id'=>$propertyContainer->batchId,);
                 }
@@ -105,7 +86,7 @@ class ENeo4jBatchTransaction extends EActiveResource
                         'body'=>array(
                             'to'=>$propertyContainer->endNode->self,
                             'type'=>$propertyContainer->type,
-                            'data'=>$propertyContainer->getAttributes(),
+                            'data'=>$propertyContainer->getAttributesToSend(),
                         ),
                         'id'=>$propertyContainer->batchId,);
                 }
@@ -117,7 +98,7 @@ class ENeo4jBatchTransaction extends EActiveResource
                         'body'=>array(
                             'to'=>'{'.$endNodeBatchId.'}',
                             'type'=>$propertyContainer->type,
-                            'data'=>$propertyContainer->getAttributes(),
+                            'data'=>$propertyContainer->getAttributesToSend(),
                         ),
                         'id'=>$propertyContainer->batchId,);
                 }
@@ -129,7 +110,7 @@ class ENeo4jBatchTransaction extends EActiveResource
                         'body'=>array(
                             'to'=>$propertyContainer->endNode->self,
                             'type'=>$propertyContainer->type,
-                            'data'=>$propertyContainer->getAttributes(),
+                            'data'=>$propertyContainer->getAttributesToSend(),
                         ),
                         'id'=>$propertyContainer->batchId,
                         );
@@ -175,7 +156,12 @@ class ENeo4jBatchTransaction extends EActiveResource
                     $instance->assignBatchId(null);
                 }
                 
-                $response=$this->postRequest('resource',$this->operations);
+                $request=new EActiveResourceRequest;
+                $request->setUri($this->getConnection()->site.'/batch');
+                $request->setMethod('POST');
+                $request->setData($this->operations);
+                
+                $response=$this->getConnection()->execute($request);
 
                 foreach($response as $resp)
                 {
