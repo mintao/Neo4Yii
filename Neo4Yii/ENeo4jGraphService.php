@@ -15,6 +15,10 @@ class ENeo4jGraphService extends EActiveResourceConnection
         $this->site=$this->host.':'.$this->port.'/'.$this->db;
     }
 
+    /**
+     * Creates an ENeo4jBatchTransaction used with this connection
+     * @return ENeo4jBatchTransaction the transaction object
+     */
     public function createBatchTransaction()
     {
         return new ENeo4jBatchTransaction($this);
