@@ -30,6 +30,15 @@ class ENeo4jRelationship extends ENeo4jPropertyContainer
         parent::init();
         $this->_type=get_class($this);
     }
+    
+    /**
+     * Returns the type of this relationship
+     * @return string The type of this relationship 
+     */
+    public function getType()
+    {
+        return $this->_type;
+    }
 
     /**
      * Get information of the PropertyContainer class and extend by adding the relationship resource
