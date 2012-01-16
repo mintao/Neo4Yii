@@ -2,7 +2,6 @@
 
 class ENeo4jBatchTransaction extends EActiveResource
 {
-    private $_connection;
     
     public $instances=array(); //this is an array of instances used within the transaction
     public $operations=array();
@@ -18,7 +17,7 @@ class ENeo4jBatchTransaction extends EActiveResource
     public function rest()
     {
         return CMap::mergeArray(
-            $this->getConnection()->rest(),
+            parent::rest(),
             array('resource'=>'batch')
         );
     }
@@ -32,19 +31,10 @@ class ENeo4jBatchTransaction extends EActiveResource
                 )
         );
     }
-    
-    public function getConnection()
+
+    public function connectionName()
     {
-        if(isset(self::$_connection))
-                return self::$_connection;
-        else
-        {
-            self::$_connection=Yii::app()->getComponent('neo4j');
-            if(self::$_connection instanceof EActiveResourceConnection)
-                return self::$_connection;
-            else
-                throw new EActiveResourceException('No "neo4j" component specified!');
-        }
+        return 'neo4j';
     }
     
     /**

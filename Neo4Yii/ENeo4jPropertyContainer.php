@@ -63,7 +63,7 @@ abstract class ENeo4jPropertyContainer extends EActiveResource
     public function rest()
     {
         return CMap::mergeArray(
-                $this->getConnection()->rest(),
+                parent::rest(),
                 array(
                     'idProperty'=>'self',
                     'container'=>'data',
@@ -83,20 +83,6 @@ abstract class ENeo4jPropertyContainer extends EActiveResource
     public function beforeSave() {
         $this->{$this->getModelClassField()}=get_class($this);
         return parent::beforeSave();
-    }
-    
-    public function getConnection()
-    {
-        if(isset(self::$_connection))
-                return self::$_connection;
-        else
-        {
-            self::$_connection=Yii::app()->getComponent('neo4j');
-            if(self::$_connection instanceof ENeo4jGraphService)
-                return self::$_connection;
-            else
-                throw new EActiveResourceException('No "neo4j" component specified!');
-        }
     }
 
     public function assignBatchId($id)
@@ -122,6 +108,11 @@ abstract class ENeo4jPropertyContainer extends EActiveResource
     public function getModelClassField()
     {
         return 'modelclass';
+    }
+    
+    public function connectionName()
+    {
+        return 'neo4j';
     }
 
     /**
@@ -289,6 +280,12 @@ abstract class ENeo4jPropertyContainer extends EActiveResource
             }
 
             return $resources;
+    }
+    
+    public function query(EGremlinScript $query)
+    {
+        $this->beforeFind();
+        return $this->getConnection()->queryByGremlin($query);
     }
 
 }
