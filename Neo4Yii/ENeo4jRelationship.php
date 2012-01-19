@@ -12,7 +12,7 @@ class ENeo4jRelationship extends ENeo4jPropertyContainer
 {
     public $start; //start uri
     public $end; //end uri
-    
+
     private $_startNode; //a container for the startNode object
     private $_endNode; //a container for the endNode object
     private $_type;
@@ -21,7 +21,7 @@ class ENeo4jRelationship extends ENeo4jPropertyContainer
     {
         return parent::model($className);
     }
-    
+
     /**
      * Sets the type according to the classname
      */
@@ -30,10 +30,10 @@ class ENeo4jRelationship extends ENeo4jPropertyContainer
         parent::init();
         $this->_type=get_class($this);
     }
-    
+
     /**
      * Returns the type of this relationship
-     * @return string The type of this relationship 
+     * @return string The type of this relationship
      */
     public function getType()
     {
@@ -51,7 +51,7 @@ class ENeo4jRelationship extends ENeo4jPropertyContainer
             array('resource'=>'relationship')
         );
     }
-    
+
     /**
      * Relationships are created differently to nodes, so we override the ActiveResource method here.
      * @param array $attributes The attributes to be used when creating the relationship
@@ -64,19 +64,19 @@ class ENeo4jRelationship extends ENeo4jPropertyContainer
 
         //check if one of the vital infos isn't there
         if($this->endNode->self==null || $this->_type==null || $this->startNode==null)
-                throw new ENeo4jException('You cannot save a relationship without defining type, startNode and endNode',500);
+            throw new ENeo4jException('You cannot save a relationship without defining type, startNode and endNode',500);
 
         if($this->beforeSave())
         {
             Yii::trace(get_class($this).'.create()','ext.Neo4Yii.ENeo4jRelationship');
-                        
+
             $response=$this->postRequest($this->getSite().'/node/'.$this->startNode->getId().'/relationships',array(),array(
-                        'to'=>$this->endNode->getId(),
-                        'type'=>$this->_type,
-                        'data'=>$this->getAttributesToSend($attributes)
-                    
+                'to'=>$this->endNode->getId(),
+                'type'=>$this->_type,
+                'data'=>$this->getAttributesToSend($attributes)
+
             ));
-            
+
             $responseData=$response->getData();
 
             $returnedmodel=$this->populateRecord($response->getData());
@@ -103,20 +103,20 @@ class ENeo4jRelationship extends ENeo4jPropertyContainer
      */
     public function findById($id)
     {
-            Yii::trace(get_class($this).'.findById()','ext.Neo4Yii.ENeo4jRelationship');
-            $gremlinQuery=new EGremlinScript;
-            $gremlinQuery->setQuery('g.e('.$id.')._().filter{it.'.$this->getModelClassField().'=="'.get_class($this).'"}');
-            $response=$this->query($gremlinQuery);
-            $responseData=$response->getData();
-            if(isset($responseData[0]))
-            {
-                $model=$this->populateRecords($responseData);
-                return $model[0];
-            }
-            else
-                return null;
+        Yii::trace(get_class($this).'.findById()','ext.Neo4Yii.ENeo4jRelationship');
+        $gremlinQuery=new EGremlinScript;
+        $gremlinQuery->setQuery('g.e('.$id.')._().filter{it.'.$this->getModelClassField().'=="'.get_class($this).'"}');
+        $response=$this->query($gremlinQuery);
+        $responseData=$response->getData();
+        if(isset($responseData[0]))
+        {
+            $model=$this->populateRecords($responseData);
+            return $model[0];
+        }
+        else
+            return null;
     }
-    
+
     /**
      * Finds all models of the named class via gremlin iterator g.E
      * @return array An array of model objects, empty if none are found
@@ -127,6 +127,9 @@ class ENeo4jRelationship extends ENeo4jPropertyContainer
         $gremlinQuery=new EGremlinScript;
 
         $gremlinQuery->setQuery('g.E._().filter{it.'.$this->getModelClassField().'=="'.get_class($this).'"}');
+        if (__CLASS__ === get_class($this)) {
+            $gremlinQuery->setQuery('g.E._()');
+        }
         $responseData=$this->query($gremlinQuery)->getData();
 
         return self::model()->populateRecords($responseData);
@@ -163,9 +166,9 @@ class ENeo4jRelationship extends ENeo4jPropertyContainer
             Yii::trace(get_class($this).' is lazyLoading startNode','ext.Neo4Yii.ENeo4jRelationship');
             $gremlinQuery=new EGremlinScript;
             $gremlinQuery->setQuery('g.e('.$this->getId().').outV');
-        
+
             $responseData=$this->getConnection()->queryByGremlin($gremlinQuery)->getData();
-            
+
             if(isset($responseData[0]))
                 return $this->_startNode=ENeo4jNode::model()->populateRecord($responseData[0]);
         }
@@ -184,14 +187,70 @@ class ENeo4jRelationship extends ENeo4jPropertyContainer
             Yii::trace(get_class($this).' is lazyLoading endNode','ext.Neo4Yii.ENeo4jRelationship');
             $gremlinQuery=new EGremlinScript;
             $gremlinQuery->setQuery('g.e('.$this->getId().').inV');
-        
+
             $responseData=$this->getConnection()->queryByGremlin($gremlinQuery)->getData();
-            
+
             if(isset($responseData[0]))
                 return $this->_endNode=ENeo4jNode::model()->populateRecord($responseData[0]);
         }
     }
 
+    /**
+     * Returns gremlin filter syntax based on given attribute key/value pair
+     * @param array $attributes
+     * @return string the resulting filter string
+     */
+    private function getFilterByAttributes(&$attributes)
+    {
+        Yii::trace(get_class($this).'.getFilterByAttributes()','ext.Neo4Yii.ENeo4jNode');
+        $filter = "";
+        foreach($attributes as $key=>$value) {
+            if(!is_int($value)) {
+                $value = '"' . $value . '"';
+            }
+            $filter .= ".filter{it.$key == $value}";
+        }
+
+        return (empty($filter) ? false : $filter);
+    }
+
+    /**
+     * Find a single property container with the specified attributes within the modelclass index.
+     * @param type $attributes
+     * @return type
+     */
+    public function findByAttributes($attributes)
+    {
+        Yii::trace(get_class($this).'.findByAttributes()','ext.Neo4Yii.ENeo4jNode');
+        $gremlinQuery=new EGremlinScript;
+
+        $gremlinQuery->setQuery('g.E' . $this->getFilterByAttributes($attributes) .
+            '.filter{it.'.$this->getModelClassField().'=="'.get_class($this).'"}');
+        $responseData=$this->getConnection()->queryByGremlin($gremlinQuery)->getData();
+
+        if(isset($responseData[0]))
+            return self::model()->populateRecord($responseData[0]);
+        else
+            return null;
+    }
+
+
+    /**
+     * Find all models of the named class via gremlin query
+     * @param type $attributes
+     * @param array An array of model objects, empty if none are found
+     */
+    public function findAllByAttributes($attributes)
+    {
+        Yii::trace(get_class($this).'.findAllByAttributes()','ext.Neo4Yii.ENeo4jNode');
+        $gremlinQuery=new EGremlinScript;
+
+        $gremlinQuery->setQuery('g.E' . $this->getFilterByAttributes($attributes) .
+            '.filter{it.'.$this->getModelClassField().'=="'.get_class($this).'"}');
+        $responseData=$this->getConnection()->queryByGremlin($gremlinQuery)->getData();
+
+        return self::model()->populateRecords($responseData);
+    }
+
 }
 
-?>
