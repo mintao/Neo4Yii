@@ -237,7 +237,7 @@ class ENeo4jRelationship extends ENeo4jPropertyContainer
 
         $gremlinQuery->setQuery('g.E' . $this->getFilterByAttributes($attributes) .
             '.filter{it.getLabel()=="'.get_class($this).'"}[0]');
-        $responseData=$this->getConnection()->queryByGremlin($gremlinQuery)->getData();
+        $responseData=$this->query($gremlinQuery)->getData();
 
         if(isset($responseData[0]))
             return self::model()->populateRecord($responseData[0]);
@@ -258,7 +258,7 @@ class ENeo4jRelationship extends ENeo4jPropertyContainer
 
         $gremlinQuery->setQuery('g.E' . $this->getFilterByAttributes($attributes) .
             '.filter{it.getLabel()=="'.get_class($this).'"}');
-        $responseData=$this->getConnection()->queryByGremlin($gremlinQuery)->getData();
+        $responseData=$this->query($gremlinQuery)->getData();
 
         return self::model()->populateRecords($responseData);
     }
