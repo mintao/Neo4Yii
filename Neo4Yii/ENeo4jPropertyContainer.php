@@ -80,23 +80,9 @@ abstract class ENeo4jPropertyContainer extends EActiveResource
         ));
     }
     
-    public function beforeSave() {
-        $this->{$this->getModelClassField()}=get_class($this);
-        return parent::beforeSave();
-    }
-
     public function assignBatchId($id)
     {
         $this->batchId=$id;
-    }
-
-    /**
-     * Inits the model and sets the modelclassfield so that the model can be instantiated properly.
-     */
-    public function init()
-    {
-        $modelclassfield=$this->getModelClassField();
-        $this->$modelclassfield=get_class($this);
     }
     
     /**
@@ -144,10 +130,19 @@ abstract class ENeo4jPropertyContainer extends EActiveResource
      */
     protected function instantiate($attributes)
     {
-        if(isset($attributes[$this->getModelClassField()]))
-            $class=$attributes[$this->getModelClassField()];
-        else
-            $class=get_class($this);
+        //if this is a relationship...
+        if(isset($attributes['type']))
+        {
+            $class=$attributes['type'];
+        }
+        else //if this is a node
+        {
+            if(isset($attributes['data'][$this->getModelClassField()]))
+                $class=$attributes['data'][$this->getModelClassField()];
+            else
+                $class=get_class($this);
+        }
+        
         $model=new $class(null);
         return $model;
     }
@@ -232,7 +227,7 @@ abstract class ENeo4jPropertyContainer extends EActiveResource
         
         if ($attributes!==false && is_array($attributes))
         {
-                $resource=$this->instantiate($attributes['data']);
+                $resource=$this->instantiate($attributes);
                 $resource->setScenario('update');
                 $resource->init();
                 

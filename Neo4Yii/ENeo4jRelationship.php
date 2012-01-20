@@ -69,13 +69,24 @@ class ENeo4jRelationship extends ENeo4jPropertyContainer
         if($this->beforeSave())
         {
             Yii::trace(get_class($this).'.create()','ext.Neo4Yii.ENeo4jRelationship');
-
-            $response=$this->postRequest($this->getSite().'/node/'.$this->startNode->getId().'/relationships',array(),array(
-                'to'=>$this->endNode->getId(),
-                'type'=>$this->_type,
-                'data'=>$this->getAttributesToSend($attributes)
-
-            ));
+            
+            $attributesToSend=$this->getAttributesToSend($attributes);
+            
+            if(!empty($attributesToSend))
+            {
+                $response=$this->postRequest($this->getSite().'/node/'.$this->startNode->getId().'/relationships',array(),array(
+                    'to'=>$this->endNode->getId(),
+                    'type'=>$this->_type,
+                    'data'=>$attributesToSend
+                ));
+            }
+            else
+            {
+                $response=$this->postRequest($this->getSite().'/node/'.$this->startNode->getId().'/relationships',array(),array(
+                    'to'=>$this->endNode->getId(),
+                    'type'=>$this->_type,
+                ));
+            }
 
             $responseData=$response->getData();
 
@@ -105,7 +116,7 @@ class ENeo4jRelationship extends ENeo4jPropertyContainer
     {
         Yii::trace(get_class($this).'.findById()','ext.Neo4Yii.ENeo4jRelationship');
         $gremlinQuery=new EGremlinScript;
-        $gremlinQuery->setQuery('g.e('.$id.')._().filter{it.'.$this->getModelClassField().'=="'.get_class($this).'"}');
+        $gremlinQuery->setQuery('g.e('.$id.')._().filter{it.getLabel()=="'.get_class($this).'"}');
         $response=$this->query($gremlinQuery);
         $responseData=$response->getData();
         if(isset($responseData[0]))
@@ -126,7 +137,7 @@ class ENeo4jRelationship extends ENeo4jPropertyContainer
         Yii::trace(get_class($this).'.findAll()','ext.Neo4Yii.ENeo4jRelationship');
         $gremlinQuery=new EGremlinScript;
 
-        $gremlinQuery->setQuery('g.E._().filter{it.'.$this->getModelClassField().'=="'.get_class($this).'"}');
+        $gremlinQuery->setQuery('g.E._().filter{it.getLabel()=="'.get_class($this).'"}');
         if (__CLASS__ === get_class($this)) {
             $gremlinQuery->setQuery('g.E._()');
         }
@@ -225,7 +236,7 @@ class ENeo4jRelationship extends ENeo4jPropertyContainer
         $gremlinQuery=new EGremlinScript;
 
         $gremlinQuery->setQuery('g.E' . $this->getFilterByAttributes($attributes) .
-            '.filter{it.'.$this->getModelClassField().'=="'.get_class($this).'"}');
+            '.filter{it.getLabel()=="'.get_class($this).'"}');
         $responseData=$this->getConnection()->queryByGremlin($gremlinQuery)->getData();
 
         if(isset($responseData[0]))
@@ -246,7 +257,7 @@ class ENeo4jRelationship extends ENeo4jPropertyContainer
         $gremlinQuery=new EGremlinScript;
 
         $gremlinQuery->setQuery('g.E' . $this->getFilterByAttributes($attributes) .
-            '.filter{it.'.$this->getModelClassField().'=="'.get_class($this).'"}');
+            '.filter{it.getLabel()=="'.get_class($this).'"}');
         $responseData=$this->getConnection()->queryByGremlin($gremlinQuery)->getData();
 
         return self::model()->populateRecords($responseData);

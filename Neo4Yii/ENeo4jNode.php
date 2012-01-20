@@ -21,6 +21,15 @@ class ENeo4jNode extends ENeo4jPropertyContainer
     private $_traversed=array();
     protected static $_models=array();
 
+    /**
+     * Inits the model and sets the modelclassfield so that the model can be instantiated properly.
+     */
+    public function init()
+    {
+        $modelclassfield=$this->getModelClassField();
+        $this->$modelclassfield=get_class($this);
+    }
+    
     public function __get($name)
     {
         if(isset($this->attributes[$name]))
