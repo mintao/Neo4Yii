@@ -236,7 +236,7 @@ class ENeo4jRelationship extends ENeo4jPropertyContainer
         $gremlinQuery=new EGremlinScript;
 
         $gremlinQuery->setQuery('g.E' . $this->getFilterByAttributes($attributes) .
-            '.filter{it.getLabel()=="'.get_class($this).'"}');
+            '.filter{it.getLabel()=="'.get_class($this).'"}[0]');
         $responseData=$this->getConnection()->queryByGremlin($gremlinQuery)->getData();
 
         if(isset($responseData[0]))
