@@ -65,55 +65,117 @@ class ENeo4jBatchTransaction
                 //otherwise this isn't an overall transaction (nodes were created before and can't be referenced with a batch {id})!!
                 $startNodeBatchId=$propertyContainer->startNode->batchId;
                 $endNodeBatchId=$propertyContainer->endNode->batchId;
-
+                $attributesToSend=$propertyContainer->getAttributesToSend();
+                
                 if(isset($startNodeBatchId) && isset($endNodeBatchId))
                 {
-                    $this->operations[]=array(
-                        'method'=>'POST',
-                        'to'=>'{'.$startNodeBatchId.'}/relationships',
-                        'body'=>array(
-                            'to'=>'{'.$endNodeBatchId.'}',
-                            'type'=>$propertyContainer->type,
-                            'data'=>$propertyContainer->getAttributesToSend(),
-                        ),
-                        'id'=>$propertyContainer->batchId,);
+                    //has data
+                    if(!empty($attributesToSend))
+                    {
+                        $this->operations[]=array(
+                            'method'=>'POST',
+                            'to'=>'{'.$startNodeBatchId.'}/relationships',
+                            'body'=>array(
+                                'to'=>'{'.$endNodeBatchId.'}',
+                                'type'=>$propertyContainer->type,
+                                'data'=>$propertyContainer->getAttributesToSend(),
+                            ),
+                            'id'=>$propertyContainer->batchId,);
+                    }
+                    else //doesn't have data
+                    {
+                        $this->operations[]=array(
+                            'method'=>'POST',
+                            'to'=>'{'.$startNodeBatchId.'}/relationships',
+                            'body'=>array(
+                                'to'=>'{'.$endNodeBatchId.'}',
+                                'type'=>$propertyContainer->type,
+                            ),
+                            'id'=>$propertyContainer->batchId,);
+                    }
                 }
                 else if(isset($startNodeBatchId) && !isset($endNodeBatchId))
                 {
-                    $this->operations[]=array(
-                        'method'=>'POST',
-                        'to'=>'{'.$startNodeBatchId.'}/relationships',
-                        'body'=>array(
-                            'to'=>$propertyContainer->endNode->self,
-                            'type'=>$propertyContainer->type,
-                            'data'=>$propertyContainer->getAttributesToSend(),
-                        ),
-                        'id'=>$propertyContainer->batchId,);
+                    //has data
+                    if(!empty($attributesToSend))
+                    {
+                        $this->operations[]=array(
+                            'method'=>'POST',
+                            'to'=>'{'.$startNodeBatchId.'}/relationships',
+                            'body'=>array(
+                                'to'=>$propertyContainer->endNode->self,
+                                'type'=>$propertyContainer->type,
+                                'data'=>$propertyContainer->getAttributesToSend(),
+                            ),
+                            'id'=>$propertyContainer->batchId,);
+                    }
+                    else //doesn't have data
+                    {
+                        $this->operations[]=array(
+                            'method'=>'POST',
+                            'to'=>'{'.$startNodeBatchId.'}/relationships',
+                            'body'=>array(
+                                'to'=>$propertyContainer->endNode->self,
+                                'type'=>$propertyContainer->type,
+                            ),
+                            'id'=>$propertyContainer->batchId,);
+                    }
                 }
                 else if(!isset($startNodeBatchId) && isset($endNodeBatchId))
                 {
-                    $this->operations[]=array(
-                        'method'=>'POST',
-                        'to'=>$propertyContainer->startNode->self.'/relationships',
-                        'body'=>array(
-                            'to'=>'{'.$endNodeBatchId.'}',
-                            'type'=>$propertyContainer->type,
-                            'data'=>$propertyContainer->getAttributesToSend(),
-                        ),
-                        'id'=>$propertyContainer->batchId,);
+                    //has data
+                    if(!empty($attributesToSend))
+                    {
+                        $this->operations[]=array(
+                            'method'=>'POST',
+                            'to'=>$propertyContainer->startNode->self.'/relationships',
+                            'body'=>array(
+                                'to'=>'{'.$endNodeBatchId.'}',
+                                'type'=>$propertyContainer->type,
+                                'data'=>$propertyContainer->getAttributesToSend(),
+                            ),
+                            'id'=>$propertyContainer->batchId,);
+                    }
+                    else //doesn't have data
+                    {
+                        $this->operations[]=array(
+                            'method'=>'POST',
+                            'to'=>$propertyContainer->startNode->self.'/relationships',
+                            'body'=>array(
+                                'to'=>'{'.$endNodeBatchId.'}',
+                                'type'=>$propertyContainer->type,
+                            ),
+                            'id'=>$propertyContainer->batchId,);
+                    }
                 }
                 else
                 {
-                    $this->operations[]=array(
-                        'method'=>'POST',
-                        'to'=>'/node/'.$propertyContainer->getStartNode()->getId().'/relationships',
-                        'body'=>array(
-                            'to'=>$propertyContainer->endNode->self,
-                            'type'=>$propertyContainer->type,
-                            'data'=>$propertyContainer->getAttributesToSend(),
-                        ),
-                        'id'=>$propertyContainer->batchId,
-                        );
+                    //has data
+                    if(!empty($attributesToSend))
+                    {
+                        $this->operations[]=array(
+                            'method'=>'POST',
+                            'to'=>'/node/'.$propertyContainer->getStartNode()->getId().'/relationships',
+                            'body'=>array(
+                                'to'=>$propertyContainer->endNode->self,
+                                'type'=>$propertyContainer->type,
+                                'data'=>$propertyContainer->getAttributesToSend(),
+                            ),
+                            'id'=>$propertyContainer->batchId,
+                            );
+                    }
+                    else //doesn't have data
+                    {
+                        $this->operations[]=array(
+                            'method'=>'POST',
+                            'to'=>'/node/'.$propertyContainer->getStartNode()->getId().'/relationships',
+                            'body'=>array(
+                                'to'=>$propertyContainer->endNode->self,
+                                'type'=>$propertyContainer->type,
+                            ),
+                            'id'=>$propertyContainer->batchId,
+                            );
+                    } 
                 }
                 
             break;

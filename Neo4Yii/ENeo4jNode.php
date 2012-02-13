@@ -21,6 +21,15 @@ class ENeo4jNode extends ENeo4jPropertyContainer
     private $_traversed=array();
     protected static $_models=array();
 
+    /**
+     * Inits the model and sets the modelclassfield so that the model can be instantiated properly.
+     */
+    public function init()
+    {
+        $modelclassfield=$this->getModelClassField();
+        $this->$modelclassfield=get_class($this);
+    }
+    
     public function __get($name)
     {
         if(isset($this->attributes[$name]))
@@ -181,8 +190,8 @@ class ENeo4jNode extends ENeo4jPropertyContainer
         $gremlinQuery=new EGremlinScript;
 
         $gremlinQuery->setQuery('g.V' . $this->getFilterByAttributes($attributes) .
-            '.filter{it.'.$this->getModelClassField().'=="'.get_class($this).'"}');
-        $responseData=$this->getConnection()->queryByGremlin($gremlinQuery)->getData();
+            '.filter{it.'.$this->getModelClassField().'=="'.get_class($this).'"}[0]');
+        $responseData=$this->query($gremlinQuery)->getData();
 
         if(isset($responseData[0]))
             return self::model()->populateRecord($responseData[0]);
@@ -202,7 +211,7 @@ class ENeo4jNode extends ENeo4jPropertyContainer
 
         $gremlinQuery->setQuery('g.V' . $this->getFilterByAttributes($attributes) .
             '.filter{it.'.$this->getModelClassField().'=="'.get_class($this).'"}');
-        $responseData=$this->getConnection()->queryByGremlin($gremlinQuery)->getData();
+        $responseData=$this->query($gremlinQuery)->getData();
 
         return self::model()->populateRecords($responseData);
     }
@@ -217,7 +226,7 @@ class ENeo4jNode extends ENeo4jPropertyContainer
         $gremlinQuery=new EGremlinScript;
 
         $gremlinQuery->setQuery($query. '.filter{it.'.$this->getModelClassField().'=="'.get_class($this).'"}');
-        $responseData=$this->getConnection()->queryByGremlin($gremlinQuery)->getData();
+        $responseData=$this->query($gremlinQuery)->getData();
 
         return self::model()->populateRecords($responseData);
     }
