@@ -8,6 +8,7 @@ and add it to your extensions folder.
 2. Download the Neo4Yii extension, import EActiveResource and Neo4Yii and configure Neo4Yii this way:
 
 ```php
+<?php
 'import'=>array(
     /* ..import stuff... */
     'application.extensions.EActiveResource.*',
@@ -31,6 +32,7 @@ Each friendship can be defined with the property "forYears". e.g.:Old friends kn
 for more than 5 years. Here is an example of how to use Neo4Yii in such a case.
 
 ```php
+<?php
 class Person extends ENeo4jNode
 {
     public static function model($className=__CLASS__)
@@ -69,6 +71,7 @@ class Person extends ENeo4jNode
 ```
 
 ```php
+<?php
 class _FRIEND_ extends ENeo4jRelationship
 {
     public static function model($className = __CLASS__) {
@@ -93,6 +96,7 @@ class _FRIEND_ extends ENeo4jRelationship
 ```
 
 ```php
+<?php
 $haensel=new Person;
 
 $haensel->attributes=array(
