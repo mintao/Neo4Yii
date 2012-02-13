@@ -6,20 +6,22 @@
 and add it to your extensions folder.
 
 2. Download the Neo4Yii extension, import EActiveResource and Neo4Yii and configure Neo4Yii this way:
-		
-		  	'import'=>array(
-		  		/* ..import stuff... */
-		  		'application.extensions.EActiveResource.*',
-                'application.extensions.Neo4Yii.*',
-        	)
+```php
+<?php	
+'import'=>array(
+    /* ..import stuff... */
+    'application.extensions.EActiveResource.*',
+    'application.extensions.Neo4Yii.*',
+)
 
-          	'neo4j'=>array(
-                    'class'=>'ENeo4jGraphService',
-                    'host'=>'192.168.2.10',
-                    'port'=>'7474',
-                    'db'=>'db/data',
-                    'queryCacheID'=>'cache',
-                ),
+'neo4j'=>array(
+    'class'=>'ENeo4jGraphService',
+    'host'=>'192.168.2.10',
+    'port'=>'7474',
+    'db'=>'db/data',
+    'queryCacheID'=>'cache',
+),
+```
 
 ##Usage
 
@@ -28,7 +30,8 @@ Persons have friends which themselves can also have friends (via a friend relati
 Each friendship can be defined with the property "forYears". e.g.:Old friends know each other
 for more than 5 years. Here is an example of how to use Neo4Yii in such a case.
 
-~~~
+```php
+<?php	
 class Person extends ENeo4jNode
 {
     public static function model($className=__CLASS__)
@@ -64,9 +67,10 @@ class Person extends ENeo4jNode
         );
     }
 }
-~~~
+```
 
-~~~
+```php
+<?php
 class _FRIEND_ extends ENeo4jRelationship
 {
     public static function model($className = __CLASS__) {
@@ -88,71 +92,72 @@ class _FRIEND_ extends ENeo4jRelationship
         );
     }
 }
-~~~
+```
 
-~~~
-			$haensel=new Person;
+```php
+<?php	
+$haensel=new Person;
+
+$haensel->attributes=array(
+    'name'=>'Johannes',
+    'surname'=>'Bauer',
+    'age'=>29,
+    'gender'=>'m'
+);
+$haensel->save();
             
-            $haensel->attributes=array(
-                'name'=>'Johannes',
-                'surname'=>'Bauer',
-                'age'=>29,
-                'gender'=>'m'
-            );
-            $haensel->save();
-                        
-            $bill=new Person;
-            $bill->attributes=array(
-                'name'=>'Bill',
-                'surname'=>'Brown',
-                'age'=>26,
-                'gender'=>'m'
-            );
-            $bill->save();
-            
-            $haensel->addRelationshipTo($bill, '_FRIEND_',array('forYears'=>10));
-            
-            $susan=new Person;
-            $susan->attributes=array(
-                'name'=>'Susan',
-                'surname'=>'Scissors',
-                'age'=>31,
-                'gender'=>'f'
-            );
-            $susan->save();
-            
-            $haensel->addRelationshipTo($susan, '_FRIEND_',array('forYears'=>4));
-            
-            $susansFriend=new Person;
-            $susansFriend->attributes=array(
-                'name'=>'Susans',
-                'surname'=>'Friend',
-                'age'=>40,
-                'gender'=>'m'
-            );
-            $susansFriend->save();
-            
-            $susan->addRelationshipTo($susansFriend, '_FRIEND_',array('forYears'=>4));
-            
-            echo 'Haensels friends:<br>';
-            foreach($haensel->friends as $friend)
-                echo $friend->name .' '.$friend->surname.'<br>';
-            
-            echo 'Haensels old friends:<br>';
-            foreach($haensel->oldFriends as $oldFriend)
-                echo $oldFriend->name .' '.$oldFriend->surname.'<br>';
-            
-            echo 'friends of Haensels friends:<br>';
-            foreach($haensel->fof as $fof)
-                echo $fof->name .' '.$fof->surname.'<br>';
-                
-            /* OUTPUT
-            Haensels friends:
-			Bill Brown
-			Susan Scissors
-			Haensels old friends:
-			Bill Brown
-			friends of Haensels friends:
-			Susans Friend
-            */
-~~~
+$bill=new Person;
+$bill->attributes=array(
+    'name'=>'Bill',
+    'surname'=>'Brown',
+    'age'=>26,
+    'gender'=>'m'
+);
+$bill->save();
+
+$haensel->addRelationshipTo($bill, '_FRIEND_',array('forYears'=>10));
+
+$susan=new Person;
+$susan->attributes=array(
+    'name'=>'Susan',
+    'surname'=>'Scissors',
+    'age'=>31,
+    'gender'=>'f'
+);
+$susan->save();
+
+$haensel->addRelationshipTo($susan, '_FRIEND_',array('forYears'=>4));
+
+$susansFriend=new Person;
+$susansFriend->attributes=array(
+    'name'=>'Susans',
+    'surname'=>'Friend',
+    'age'=>40,
+    'gender'=>'m'
+);
+$susansFriend->save();
+
+$susan->addRelationshipTo($susansFriend, '_FRIEND_',array('forYears'=>4));
+
+echo 'Haensels friends:<br>';
+foreach($haensel->friends as $friend)
+    echo $friend->name .' '.$friend->surname.'<br>';
+
+echo 'Haensels old friends:<br>';
+foreach($haensel->oldFriends as $oldFriend)
+    echo $oldFriend->name .' '.$oldFriend->surname.'<br>';
+
+echo 'friends of Haensels friends:<br>';
+foreach($haensel->fof as $fof)
+    echo $fof->name .' '.$fof->surname.'<br>';
+    
+/* OUTPUT
+Haensels friends:
+Bill Brown
+Susan Scissors
+Haensels old friends:
+Bill Brown
+friends of Haensels friends:
+Susans Friend
+*/
+```
