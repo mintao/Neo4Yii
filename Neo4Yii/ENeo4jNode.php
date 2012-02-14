@@ -225,7 +225,125 @@ class ENeo4jNode extends ENeo4jPropertyContainer
 
         return self::model()->populateRecords($responseData);
     }
-
+    
+    /**
+     * Finds a single node exactly matching the supplied key=>value pair. If no index name is supplied the index defined
+     * via ENeo4jPropertyContainer::indexName() will be used which matches the classname of the node.
+     * @param string $key The key
+     * @param string $value The value
+     * @param string $index Optional index name. If null the default index will be used
+     * @return ENeo4jNode The resulting node, or null if none was found 
+     */
+    public function findByExactIndexEntry($key,$value,$index=null)
+    {
+        Yii::trace(get_class($this).'.findByExactIndexEntry()','ext.Neo4Yii.ENeo4jNode');
+        if(is_null($index))
+            $index=$this->indexName();
+        $query=new EGremlinScript;
+        $query->setQuery(
+                'import org.neo4j.graphdb.index.*
+                import org.neo4j.graphdb.*
+                neo4j = g.getRawGraph()
+                idxManager = neo4j.index()
+                index = idxManager.forNodes("'.$index.'")
+                results = index.get("'.$key.'", "'.$value.'")[0]'
+                );
+        $responseData=$this->query($query)->getData();
+        
+        return ENeo4jNode::model()->populateRecord($responseData);
+    }
+    
+    /**
+     * Finds all nodes exactly matching the supplied key=>value pair. If no index name is supplied the index defined
+     * via ENeo4jPropertyContainer::indexName() will be used which matches the classname of the node.
+     * @param string $key The key
+     * @param string $value The value
+     * @param string $index Optional index name. If null the default index will be used
+     * @return array An array of nodes, or an empty array if none were found 
+     */
+    public function findAllByExactIndexEntry($key,$value,$index=null)
+    {
+        Yii::trace(get_class($this).'.findAllByExactIndexEntry()','ext.Neo4Yii.ENeo4jNode');
+        if(is_null($index))
+            $index=$this->indexName();
+        
+        $query=new EGremlinScript;
+        $query->setQuery(
+                'import org.neo4j.graphdb.index.*
+                import org.neo4j.graphdb.*
+                neo4j = g.getRawGraph()
+                idxManager = neo4j.index()
+                index = idxManager.forNodes("'.$index.'")
+                results = index.get("'.$key.'", "'.$value.'")'
+                );
+        $responseData=$this->query($query)->getData();
+        
+        return ENeo4jNode::model()->populateRecords($responseData);
+    }
+    
+    
+    /**
+     * Finds nodes according to a lucene query. The syntax is as follows
+     * <p>array('operator'=>array('key'=>'value'))
+     * <p>Were "operator" can either be AND or OR and the $key=>$value matches the lucene syntax 'key':'value'.
+     * <p>If supplying an array of the form array('key'=>'value') the operator will default to AND
+     * @param array $indexQuery An associative array reflecting the lucene query
+     * @param string $index Optional name of the index to be used for searching. Defaults to the index defined via
+     * indexName()
+     * @return array An array of resulting nodes or empty array if no results were found
+     */
+    public function findByIndexQuery($indexQuery,$index=null)
+    {
+        Yii::trace(get_class($this).'.findByIndexQuery()','ext.Neo4Yii.ENeo4jNode');
+        if(is_null($index))
+            $index=$this->indexName();
+        
+        $queryString='';
+        $i=0;
+        foreach($indexQuery as $operator=>$query)
+        {
+            if(is_array($query))
+            {
+                if($queryString!='')
+                    $queryString.=" $operator ";
+                $x=0;
+                foreach($query as $key=>$value)
+                {
+                    //don't urlencode the damn asterisk....not elegant, but works
+                    $queryString.=urlencode($key).':'.($value=='*' ? '*' : urlencode($value));
+                    if($x>=0 && $x<count($query)-1)
+                        $queryString.=" $operator ";
+                    $x++;
+                }
+                $i++;
+            }
+            else
+            {
+                    //don't urlencode the damn asterisk....not elegant, but works
+                    $queryString.=urlencode($operator).':'.($query=='*' ? '*' : urlencode($query));
+                    if($i>=0 && $i<count($indexQuery)-1)
+                        $queryString.=" AND ";
+                    $i++;
+            }
+        }
+        
+        $query=new EGremlinScript;
+        $query->setQuery(
+                'import org.neo4j.graphdb.index.*
+                import org.neo4j.graphdb.*
+                import org.neo4j.index.lucene.*
+                import org.apache.lucene.search.*
+                neo4j = g.getRawGraph()
+                idxManager = neo4j.index()
+                index = idxManager.forNodes("'.$index.'")
+                query = new QueryContext("'.$queryString.'")
+                results = index.query(query)');
+        
+        $responseData=$this->query($query)->getData();
+        
+        return ENeo4jNode::model()->populateRecords($responseData);
+    }
+    
     /**
      * Find all models of the named class via custom gremlin query
      * @param type $query

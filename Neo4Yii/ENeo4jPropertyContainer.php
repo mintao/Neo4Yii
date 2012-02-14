@@ -80,6 +80,15 @@ abstract class ENeo4jPropertyContainer extends EActiveResource
         ));
     }
     
+    /**
+     * Override this method to define an default index that will be used by all finder methods used for index querying
+     * @return string The name of the index as string. Defaults to the classname
+     */
+    public function indexName()
+    {
+        return get_class($this);
+    }
+    
     public function assignBatchId($id)
     {
         $this->batchId=$id;

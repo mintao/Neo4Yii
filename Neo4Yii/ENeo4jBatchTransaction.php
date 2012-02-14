@@ -200,11 +200,87 @@ class ENeo4jBatchTransaction
         $this->operations[]=array(
             'method'=>'PUT',
             'to'=>'/'.$propertyContainer->getResource().'/'.$propertyContainer->getId().'/properties',
-            'body'=>$propertyContainer->getAttributes(),
+            'body'=>$propertyContainer->getAttributesToSend(),
             'id'=>$propertyContainer->batchId
         );
 
     }
+    
+    /**
+     * Add an index operation to this transaction.
+     * @param ENeo4jPropertyContainer $propertyContainer The property container used for indexing
+     * @param array $attributes The attributes to be indexed
+     * @param string $index Optional: the name of the index to be used. Defaults to the default index of the property container defined via indexName()
+     * @param boolean $update Set to true if you want to replace existing index entries. Defaults to false, meaning adding index entries, even if they already exist
+     */
+    public function addIndexOperation(ENeo4jPropertyContainer $propertyContainer,$attributes=array(),$index=null,$update=false)
+    {
+        $propertyContainer->assignBatchId(count($this->operations));
+        $this->addToInstances($propertyContainer);
+        if(is_null($index))
+            $index=$propertyContainer->indexName();
+        
+        if($update)
+        {
+            foreach($attributes as $key=>$value)
+            {
+                $this->operations[]=array(
+                    'method'=>'DELETE',
+                    'to'=>'/index/'.$propertyContainer->getResource().'/'.urlencode($index).'/'.urlencode($key).'/'.$propertyContainer->id,
+                    'id'=>$propertyContainer->batchId
+                );
+            }
+        }
+            
+        foreach($attributes as $key=>$value)
+        {
+            $this->operations[]=array(
+                'method'=>'POST',
+                'to'=>'/index/'.$propertyContainer->getResource().'/'.urlencode($index),
+                'body'=>array('uri'=>$propertyContainer->self,'key'=>$key,'value'=>$value),
+                'id'=>$propertyContainer->batchId
+            );
+        }
+    }
+    
+    /**
+     * Removes a property container from an index. If attributes are supplied only entries for given attribute keys will be deleted
+     * If no attributes are given, all entries for the given property container will be deleted.
+     * @param ENeo4jPropertyContainer $propertyContainer
+     * @param array $attributes Optional: An array of attributes to be deleted for this property container
+     * @param string $index Optional: Name of the index this operation will be using. Defaults to null,
+     * meaning that the default index of the property container as defined in indexName() will we used => class name of the PC.
+     */
+    public function addRemoveFromIndexOperation(ENeo4jPropertyContainer $propertyContainer,$attributes=array(),$index=null)
+    {
+        if(is_null($index))
+            $index=$propertyContainer->indexName();
+        
+        $propertyContainer->assignBatchId(count($this->operations));
+        $this->addToInstances($propertyContainer);
+        
+        if(!empty($attributes))
+        {
+            //only delete entries for given attributes
+            foreach($attributes as $key=>$value)
+            {
+                $this->operations[]=array(
+                    'method'=>'DELETE',
+                    'to'=>'/index/'.$propertyContainer->getResource().'/'.urlencode($index).'/'.$key.'/'.$propertyContainer->id,
+                    'id'=>$propertyContainer->batchId
+                );
+            }
+        }
+        else
+        {
+            //delete all entries for this property container
+            $this->operations[]=array(
+                'method'=>'DELETE',
+                'to'=>'/index/'.$propertyContainer->getResource().'/'.urlencode($index).'/'.$propertyContainer->id,
+                'id'=>$propertyContainer->batchId
+            );
+        }
+    }  
 
     public function execute()
     {
