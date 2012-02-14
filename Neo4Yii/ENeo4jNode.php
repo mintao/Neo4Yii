@@ -120,15 +120,25 @@ class ENeo4jNode extends ENeo4jPropertyContainer
         $query=new EGremlinScript;
         $query->setQuery('g.v('.$this->getId().').'.$traversal[2]);
 
-        $resultData=$this->getConnection()->queryByGremlin($query)->getData();
+        $resultData=$this->query($query)->getData();
 
         $class=$traversal[1];
 
-        if($traversal[0]==self::HAS_ONE && isset($resultData[0]))
-            $this->_traversed[$name]=$class::model()->populateRecord($resultData[0]);
-        if($traversal[0]==self::HAS_MANY && isset($resultData[0]))
-            $this->_traversed[$name]=$class::model()->populateRecords($resultData);
-
+        //if this is a path do not use model()
+        if($class==self::PATH)
+        {
+            if($traversal[0]==self::HAS_ONE && isset($resultData[0]))
+                $this->_traversed[$name]=ENeo4jPath::populatePath($resultData[0]);
+            if($traversal[0]==self::HAS_MANY && isset($resultData[0]))
+                $this->_traversed[$name]=ENeo4jPath::populatePaths($resultData);
+        }
+        else
+        {
+            if($traversal[0]==self::HAS_ONE && isset($resultData[0]))
+                $this->_traversed[$name]=$class::model()->populateRecord($resultData[0]);
+            if($traversal[0]==self::HAS_MANY && isset($resultData[0]))
+                $this->_traversed[$name]=$class::model()->populateRecords($resultData);
+        }
         if(!isset($this->_traversed[$name]))
         {
             if($traversal[0]==self::HAS_MANY)

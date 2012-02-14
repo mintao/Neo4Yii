@@ -7,7 +7,7 @@ class ENeo4jGraphService extends EActiveResourceConnection
     public $db='db/data';
     public $contentType="application/json";
     public $acceptType="application/json";
-    public $allowNullValues=false;
+    public $allowNullValues=false; //neo4j doesn't allow null values
         
     public function init()
     {
@@ -24,6 +24,11 @@ class ENeo4jGraphService extends EActiveResourceConnection
         return new ENeo4jBatchTransaction($this);
     }
 
+    /**
+     * Query the neo4j instance with a gremlin script.
+     * @param EGremlinScript the gremlin script to be sent
+     * @return EActiveResourceResponse A response object holding the response of the neo4j instance.
+     */
     public function queryByGremlin(EGremlinScript $gremlin)
     {
         Yii::trace(get_class($this).'.queryByGremlin()','ext.Neo4Yii.ENeo4jGraphService');
