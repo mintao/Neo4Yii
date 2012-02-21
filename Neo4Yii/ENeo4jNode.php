@@ -283,11 +283,8 @@ class ENeo4jNode extends ENeo4jPropertyContainer
     
     
     /**
-     * Finds nodes according to a lucene query. The syntax is as follows
-     * <p>array('operator'=>array('key'=>'value'))
-     * <p>Were "operator" can either be AND or OR and the $key=>$value matches the lucene syntax 'key':'value'.
-     * <p>If supplying an array of the form array('key'=>'value') the operator will default to AND
-     * @param array $indexQuery An associative array reflecting the lucene query
+     * Finds node according to a lucene query.
+     * @param array $indexQuery The query string
      * @param string $index Optional name of the index to be used for searching. Defaults to the index defined via
      * indexName()
      * @return array An array of resulting nodes or empty array if no results were found
@@ -297,36 +294,7 @@ class ENeo4jNode extends ENeo4jPropertyContainer
         Yii::trace(get_class($this).'.findByIndexQuery()','ext.Neo4Yii.ENeo4jNode');
         if(is_null($index))
             $index=$this->indexName();
-        
-        $queryString='';
-        $i=0;
-        foreach($indexQuery as $operator=>$query)
-        {
-            if(is_array($query))
-            {
-                if($queryString!='')
-                    $queryString.=" $operator ";
-                $x=0;
-                foreach($query as $key=>$value)
-                {
-                    //don't urlencode the damn asterisk....not elegant, but works
-                    $queryString.=urlencode($key).':'.($value=='*' ? '*' : urlencode($value));
-                    if($x>=0 && $x<count($query)-1)
-                        $queryString.=" $operator ";
-                    $x++;
-                }
-                $i++;
-            }
-            else
-            {
-                    //don't urlencode the damn asterisk....not elegant, but works
-                    $queryString.=urlencode($operator).':'.($query=='*' ? '*' : urlencode($query));
-                    if($i>=0 && $i<count($indexQuery)-1)
-                        $queryString.=" AND ";
-                    $i++;
-            }
-        }
-        
+               
         $query=new EGremlinScript;
         $query->setQuery(
                 'import org.neo4j.graphdb.index.*
@@ -336,7 +304,7 @@ class ENeo4jNode extends ENeo4jPropertyContainer
                 neo4j = g.getRawGraph()
                 idxManager = neo4j.index()
                 index = idxManager.forNodes("'.$index.'")
-                query = new QueryContext("'.$queryString.'")
+                query = new QueryContext("'.$indexQuery.'")
                 results = index.query(query)');
         
         $responseData=$this->query($query)->getData();
@@ -435,13 +403,13 @@ class ENeo4jNode extends ENeo4jPropertyContainer
 
     /**
      * Add a relationship to another node
-     * @param ENeo4jNode $node The node object to connect with (will be the endNode of the relationship)
+     * @param mixed $node Either a node object or the id of the node to connect with (will be the endNode of the relationship)
      * @param string $type The type of this relationship. something like 'HAS_NAME'. If this is the name of an existing relationship class this class will be instantiated, if not ENeo4jRelationship will be used
      * @param array $properties An array of properties used for the relationship. e.g.: array('since'=>'2010')
      *
      * @return ENeo4jRelationship
      */
-    public function addRelationshipTo(ENeo4jNode $node, $type, array $properties=null)
+    public function addRelationshipTo($node, $type, array $properties=null)
     {
         Yii::trace(
             get_class($this).'.addRelationshipTo()',
