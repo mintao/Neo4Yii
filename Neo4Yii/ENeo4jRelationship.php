@@ -332,35 +332,6 @@ class ENeo4jRelationship extends ENeo4jPropertyContainer
        if(is_null($index))
             $index=$this->indexName();
         
-        $queryString='';
-        $i=0;
-        foreach($indexQuery as $operator=>$query)
-        {
-            if(is_array($query))
-            {
-                if($queryString!='')
-                    $queryString.=" $operator ";
-                $x=0;
-                foreach($query as $key=>$value)
-                {
-                    //don't urlencode the damn asterisk....not elegant, but works
-                    $queryString.=urlencode($key).':'.($value=='*' ? '*' : urlencode($value));
-                    if($x>=0 && $x<count($query)-1)
-                        $queryString.=" $operator ";
-                    $x++;
-                }
-                $i++;
-            }
-            else
-            {
-                    //don't urlencode the damn asterisk....not elegant, but works
-                    $queryString.=urlencode($operator).':'.($query=='*' ? '*' : urlencode($query));
-                    if($i>=0 && $i<count($indexQuery)-1)
-                        $queryString.=" AND ";
-                    $i++;
-            }
-        }
-        
         $query=new EGremlinScript;
         $query->setQuery(
                 'import org.neo4j.graphdb.index.*
@@ -370,7 +341,7 @@ class ENeo4jRelationship extends ENeo4jPropertyContainer
                 neo4j = g.getRawGraph()
                 idxManager = neo4j.index()
                 index = idxManager.forRelationships("'.$index.'")
-                query = new QueryContext("'.$queryString.'")
+                query = new QueryContext("'.$indexQuery.'")
                 results = index.query(query)');
         
         $responseData=$this->query($query)->getData();
