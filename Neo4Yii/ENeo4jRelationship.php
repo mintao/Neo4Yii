@@ -10,7 +10,6 @@
  */
 class ENeo4jRelationship extends ENeo4jPropertyContainer
 {
-    private $_startNode; //a container for the startNode object
     private $_endNode; //a container for the endNode object
     private $_type;
 
