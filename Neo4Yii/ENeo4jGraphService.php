@@ -99,69 +99,60 @@ class ENeo4jGraphService extends EActiveResourceConnection
     
     /**
      * Add a node to an index. If no attributes are provided all attributes will be indexed
-     * @param ENeo4jNode $node The node to be indexed
-     * @param array $attributes Optional: Attributes to be indexed. Defaults to empty array, meaning all attributes of this node
-     * @param string $index Optional: Name of the index to be used. Defaults to the default index of this node (specified in indexName())
+     * @param integer $nodeId The id of the node to be indexed.
+     * @param array $attributes The Attributes to be indexed as key=>value pairs
+     * @param string $index The name of the index to be used.
      * @param boolean $update Wheter to overwrite existing entries or not, defaults to false.
      */
-    public function addNodeToIndex(ENeo4jNode $node,$attributes=array(),$index=null,$update=false)
+    public function addNodeToIndex($nodeId,$attributes,$index,$update=false)
     {
         Yii::trace(get_class($this).'.addNodeToIndex()','ext.Neo4Yii.ENeo4jGraphService');
-        if(is_null($index))
-            $index=$node->indexName();
-        
         $trans=$this->createBatchTransaction();
-        empty($attributes) ? $trans->addIndexOperation($node,$node->getAttributesToSend(),$index,$update) : $trans->addIndexOperation($node,$attributes,$index,$update);
+        $trans->addNodeToIndexOperation($nodeId,$attributes,$index,$update);
         $trans->execute();       
     }
     
     /**
      * Remove a node entry from an index
-     * @param ENeo4jNode $node The node to be removed
+     * @param integer $nodeId The id of the node to be removed
      * @param array $attributes Optional: Attributes to be removed. Defaults to empty array meaning all attributes of this node will be removed
-     * @param type $index Optional: Name of the index to be used. Defaults to the default index of this node (specified in indexName())
+     * @param string $index Name of the index to be used
      */
-    public function removeNodeFromIndex(ENeo4jNode $node,$attributes=array(),$index=null)
+    public function removeNodeFromIndex($nodeId,$index,$attributes=array())
     {
-        if(is_null($index))
-            $index=$node->indexName();
-        
+        Yii::trace(get_class($this).'.removeNodeFromIndex()','ext.Neo4Yii.ENeo4jGraphService');
         $trans=$this->createBatchTransaction();
-        $trans->addRemoveFromIndexOperation($node,$attributes,$index);
+        $trans->addRemoveNodeFromIndexOperation($nodeId,$index,$attributes);
         $trans->execute();    
     }
     
     /**
      * Add a relationship to an index. If no attributes are provided all attributes will be indexed
-     * @param ENeo4jRelationship $relationship The relationship to be indexed
-     * @param array $attributes Optional: Attributes to be indexed. Defaults to empty array, meaning all attributes of this relationship
-     * @param string $index Optional: Name of the index to be used. Defaults to the default index of this relationship (specified in indexName())
+     * @param integer $relationshipId The id of the node to be indexed.
+     * @param array $attributes The Attributes to be indexed as key=>value pairs
+     * @param string $index The name of the index to be used.
      * @param boolean $update Wheter to overwrite existing entries or not, defaults to false.
      */
-    public function addRelationshipToIndex(ENeo4jRelationship $relationship,$attributes=array(),$index=null,$update=false)
+    public function addRelationshipToIndex($relationshipId,$attributes,$index,$update=false)
     {
         Yii::trace(get_class($this).'.addRelationshipToIndex()','ext.Neo4Yii.ENeo4jGraphService');
-        if(is_null($index))
-            $index=$relationship->indexName();
         $trans=$this->createBatchTransaction();
-        empty($keyValuePairs) ? $trans->addIndexOperation($relationship,$relationship->getAttributesToSend(),$index,$update) : $trans->addIndexOperation($relationship,$attributes,$index,$update);
-        $trans->execute();         
+        $trans->addRelationshipToIndexOperation($relationshipId,$attributes,$index,$update);
+        $trans->execute();       
     }
     
     /**
      * Remove a relationship entry from an index
-     * @param ENeo4jRelationship $node The relationship to be removed
+     * @param integer $relationshipId The id of the node to be removed
      * @param array $attributes Optional: Attributes to be removed. Defaults to empty array meaning all attributes of this relationship will be removed
-     * @param type $index Optional: Name of the index to be used. Defaults to the default index of this relationship (specified in indexName())
+     * @param string $index Name of the index to be used
      */
-    public function removeRelationshipFromIndex(ENeo4jRelationship $relationship,$attributes=array(),$index=null)
+    public function removeRelationshipFromIndex($relationshipId,$index,$attributes=array())
     {
-        if(is_null($index))
-            $index=$relationship->indexName();
-        
+        Yii::trace(get_class($this).'.removeRelationshipFromIndex()','ext.Neo4Yii.ENeo4jGraphService');
         $trans=$this->createBatchTransaction();
-        $trans->addRemoveFromIndexOperation($relationship,$attributes,$index);
-        $trans->execute();   
+        $trans->addRemoveRelationshipFromIndexOperation($relationshipId,$index,$attributes);
+        $trans->execute();    
     }    
 }
 ?>

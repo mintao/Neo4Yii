@@ -207,18 +207,15 @@ class ENeo4jBatchTransaction
     }
     
     /**
-     * Add an index operation to this transaction.
-     * @param ENeo4jPropertyContainer $propertyContainer The property container used for indexing
+     * Adds a node to a defined index with given attributes.
+     * @param integer $nodeId The id of the node to be indexed.
      * @param array $attributes The attributes to be indexed
-     * @param string $index Optional: the name of the index to be used. Defaults to the default index of the property container defined via indexName()
+     * @param string $index The name of the index to be used
      * @param boolean $update Set to true if you want to replace existing index entries. Defaults to false, meaning adding index entries, even if they already exist
      */
-    public function addIndexOperation(ENeo4jPropertyContainer $propertyContainer,$attributes=array(),$index=null,$update=false)
+    public function addNodeToIndexOperation($nodeId,$attributes,$index,$update=false)
     {
-        $propertyContainer->assignBatchId(count($this->operations));
-        $this->addToInstances($propertyContainer);
-        if(is_null($index))
-            $index=$propertyContainer->indexName();
+        $batchId=count($this->operations);
         
         if($update)
         {
@@ -226,8 +223,8 @@ class ENeo4jBatchTransaction
             {
                 $this->operations[]=array(
                     'method'=>'DELETE',
-                    'to'=>'/index/'.$propertyContainer->getResource().'/'.urlencode($index).'/'.urlencode($key).'/'.$propertyContainer->id,
-                    'id'=>$propertyContainer->batchId
+                    'to'=>'/index/node/'.urlencode($index).'/'.urlencode($key).'/'.$nodeId,
+                    'id'=>$batchId
                 );
             }
         }
@@ -236,9 +233,43 @@ class ENeo4jBatchTransaction
         {
             $this->operations[]=array(
                 'method'=>'POST',
-                'to'=>'/index/'.$propertyContainer->getResource().'/'.urlencode($index),
-                'body'=>array('uri'=>$propertyContainer->self,'key'=>$key,'value'=>$value),
-                'id'=>$propertyContainer->batchId
+                'to'=>'/index/node/'.urlencode($index),
+                'body'=>array('uri'=>$this->getConnection()->site.'/'.$nodeId,'key'=>$key,'value'=>$value),
+                'id'=>$batchId
+            );
+        }
+    }
+    
+    /**
+     * Adds a relationship to a defined index with given attributes.
+     * @param integer $relationshipId The id of the node to be indexed.
+     * @param array $attributes The attributes to be indexed
+     * @param string $index The name of the index to be used
+     * @param boolean $update Set to true if you want to replace existing index entries. Defaults to false, meaning adding index entries, even if they already exist
+     */
+    public function addRelationshipToIndexOperation($relationshipId,$attributes,$index,$update=false)
+    {
+        $batchId=count($this->operations);
+        
+        if($update)
+        {
+            foreach($attributes as $key=>$value)
+            {
+                $this->operations[]=array(
+                    'method'=>'DELETE',
+                    'to'=>'/index/relationship/'.urlencode($index).'/'.urlencode($key).'/'.$relationshipId,
+                    'id'=>$batchId
+                );
+            }
+        }
+            
+        foreach($attributes as $key=>$value)
+        {
+            $this->operations[]=array(
+                'method'=>'POST',
+                'to'=>'/index/relationship/'.urlencode($index),
+                'body'=>array('uri'=>$this->getConnection()->site.'/'.$relationshipId,'key'=>$key,'value'=>$value),
+                'id'=>$batchId
             );
         }
     }
@@ -246,18 +277,13 @@ class ENeo4jBatchTransaction
     /**
      * Removes a property container from an index. If attributes are supplied only entries for given attribute keys will be deleted
      * If no attributes are given, all entries for the given property container will be deleted.
-     * @param ENeo4jPropertyContainer $propertyContainer
-     * @param array $attributes Optional: An array of attributes to be deleted for this property container
-     * @param string $index Optional: Name of the index this operation will be using. Defaults to null,
-     * meaning that the default index of the property container as defined in indexName() will we used => class name of the PC.
+     * @param integer $nodeId The id of the node to be removed from the index
+     * @param string $index Name of the index this operation will be using
+     * @param array $attributes Optional: An array of attributes to be deleted for this property container. If none are provided the node will be removed for all indexed properties
      */
-    public function addRemoveFromIndexOperation(ENeo4jPropertyContainer $propertyContainer,$attributes=array(),$index=null)
+    public function addRemoveNodeFromIndexOperation($nodeId,$index,$attributes=array())
     {
-        if(is_null($index))
-            $index=$propertyContainer->indexName();
-        
-        $propertyContainer->assignBatchId(count($this->operations));
-        $this->addToInstances($propertyContainer);
+        $batchId=count($this->operations);
         
         if(!empty($attributes))
         {
@@ -266,8 +292,8 @@ class ENeo4jBatchTransaction
             {
                 $this->operations[]=array(
                     'method'=>'DELETE',
-                    'to'=>'/index/'.$propertyContainer->getResource().'/'.urlencode($index).'/'.$key.'/'.$propertyContainer->id,
-                    'id'=>$propertyContainer->batchId
+                    'to'=>'/index/node/'.urlencode($index).'/'.$key.'/'.$nodeId,
+                    'id'=>$batchId
                 );
             }
         }
@@ -276,11 +302,45 @@ class ENeo4jBatchTransaction
             //delete all entries for this property container
             $this->operations[]=array(
                 'method'=>'DELETE',
-                'to'=>'/index/'.$propertyContainer->getResource().'/'.urlencode($index).'/'.$propertyContainer->id,
-                'id'=>$propertyContainer->batchId
+                'to'=>'/index/node/'.urlencode($index).'/'.$nodeId,
+                'id'=>$batchId
             );
         }
-    }  
+    }
+    
+    /**
+     * Removes a property container from an index. If attributes are supplied only entries for given attribute keys will be deleted
+     * If no attributes are given, all entries for the given property container will be deleted.
+     * @param integer $relationshipId The id of the node to be removed from the index
+     * @param string $index Name of the index this operation will be using
+     * @param array $attributes Optional: An array of attributes to be deleted for this property container. If none are provided the node will be removed for all indexed properties
+     */
+    public function addRemoveRelationshipFromIndexOperation($relationshipId,$index,$attributes=array())
+    {
+        $batchId=count($this->operations);
+        
+        if(!empty($attributes))
+        {
+            //only delete entries for given attributes
+            foreach($attributes as $key=>$value)
+            {
+                $this->operations[]=array(
+                    'method'=>'DELETE',
+                    'to'=>'/index/relationship/'.urlencode($index).'/'.$key.'/'.$relationshipId,
+                    'id'=>$batchId
+                );
+            }
+        }
+        else
+        {
+            //delete all entries for this property container
+            $this->operations[]=array(
+                'method'=>'DELETE',
+                'to'=>'/index/relationship/'.urlencode($index).'/'.$relationshipId,
+                'id'=>$batchId
+            );
+        }
+    }
 
     public function execute()
     {
@@ -305,7 +365,7 @@ class ENeo4jBatchTransaction
                 {
                     //we check if any id that is coming back is connected to a propertyContainer in our instances array.
                     //If so we update the object and assign the idProperty (=self)
-                    if(isset($resp['id']) && isset($resp['body']['self']))
+                    if(isset($resp['id']) && isset($this->instances[$resp['id']]) && isset($resp['body']['self']))
                     {
                         $instance=$this->instances[$resp['id']];
                         $propertyField=$instance->idProperty();
