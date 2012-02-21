@@ -60,7 +60,7 @@ class ENeo4jRelationship extends ENeo4jPropertyContainer
             throw new ENeo4jException('The relationship cannot be inserted because it is not new.',500);
 
         //check if one of the vital infos isn't there
-        if($this->_endNode==null || $this->_type==null || $this->_startNode==null)
+        if($this->endNode->self==null || $this->_type==null || $this->startNode==null)
             throw new ENeo4jException('You cannot save a relationship without defining type, startNode and endNode',500);
 
         if($this->beforeSave())
@@ -68,21 +68,19 @@ class ENeo4jRelationship extends ENeo4jPropertyContainer
             Yii::trace(get_class($this).'.create()','ext.Neo4Yii.ENeo4jRelationship');
             
             $attributesToSend=$this->getAttributesToSend($attributes);
-            $startNodeId=$this->_startNode instanceOf ENeo4jNode ? $this->_startNode->id : $this->_startNode;
-            $endNodeId=$this->_endNode instanceOf ENeo4jNode ? $this->_endNode->id : $this->_endNode;
             
             if(!empty($attributesToSend))
             {
-                $response=$this->postRequest($this->getSite().'/node/'.$startNodeId.'/relationships',array(),array(
-                    'to'=>$endNodeId,
+                $response=$this->postRequest($this->getSite().'/node/'.$this->startNode->getId().'/relationships',array(),array(
+                    'to'=>$this->endNode->getId(),
                     'type'=>$this->_type,
                     'data'=>$attributesToSend
                 ));
             }
             else
             {
-                $response=$this->postRequest($this->getSite().'/node/'.$startNodeId.'/relationships',array(),array(
-                    'to'=>$endNodeId,
+                $response=$this->postRequest($this->getSite().'/node/'.$this->startNode->getId().'/relationships',array(),array(
+                    'to'=>$this->endNode->getId(),
                     'type'=>$this->_type,
                 ));
             }
@@ -146,19 +144,19 @@ class ENeo4jRelationship extends ENeo4jPropertyContainer
     }
 
     /**
-     * Setter for the startNode
-     * @param mixed $node Either an ENeo4jNode object or the id of the startNode
+     * Setter for the startNode object
+     * @param ENeo4jNode $node
      */
-    public function setStartNode($node)
+    public function setStartNode(ENeo4jNode $node)
     {
         $this->_startNode=$node;
     }
 
     /**
      * Setter for the endNode object
-     * @param mixed $node Either an ENeo4jNode object or the id of the endNode
+     * @param ENeo4jNode $node
      */
-    public function setEndNode($node)
+    public function setEndNode(ENeo4jNode $node)
     {
         $this->_endNode=$node;
     }
@@ -169,7 +167,7 @@ class ENeo4jRelationship extends ENeo4jPropertyContainer
      */
     public function getStartNode()
     {
-        if(isset($this->_startNode) && $this->_startNode instanceof ENeo4jNode)
+        if(isset($this->_startNode))
             return $this->_startNode;
         else
         {
@@ -190,7 +188,7 @@ class ENeo4jRelationship extends ENeo4jPropertyContainer
      */
     public function getEndNode()
     {
-        if(isset($this->_endNode) && $this->_endNode instanceof ENeo4jNode)
+        if(isset($this->_endNode))
             return $this->_endNode;
         else
         {
@@ -319,8 +317,11 @@ class ENeo4jRelationship extends ENeo4jPropertyContainer
     
     
     /**
-     * Finds relationships according to a lucene query.
-     * @param array $indexQuery The query string
+     * Finds relationships according to a lucene query. The syntax is as follows
+     * <p>array('operator'=>array('key'=>'value'))
+     * <p>Were "operator" can either be AND or OR and the $key=>$value matches the lucene syntax 'key':'value'.
+     * <p>If supplying an array of the form array('key'=>'value') the operator will default to AND
+     * @param array $indexQuery An associative array reflecting the lucene query
      * @param string $index Optional name of the index to be used for searching. Defaults to the index defined via
      * indexName()
      * @return array An array of resulting nodes or empty array if no results were found
@@ -330,7 +331,36 @@ class ENeo4jRelationship extends ENeo4jPropertyContainer
         Yii::trace(get_class($this).'.findByIndexQuery()','ext.Neo4Yii.ENeo4jRelationship');
        if(is_null($index))
             $index=$this->indexName();
-                
+        
+        $queryString='';
+        $i=0;
+        foreach($indexQuery as $operator=>$query)
+        {
+            if(is_array($query))
+            {
+                if($queryString!='')
+                    $queryString.=" $operator ";
+                $x=0;
+                foreach($query as $key=>$value)
+                {
+                    //don't urlencode the damn asterisk....not elegant, but works
+                    $queryString.=urlencode($key).':'.($value=='*' ? '*' : urlencode($value));
+                    if($x>=0 && $x<count($query)-1)
+                        $queryString.=" $operator ";
+                    $x++;
+                }
+                $i++;
+            }
+            else
+            {
+                    //don't urlencode the damn asterisk....not elegant, but works
+                    $queryString.=urlencode($operator).':'.($query=='*' ? '*' : urlencode($query));
+                    if($i>=0 && $i<count($indexQuery)-1)
+                        $queryString.=" AND ";
+                    $i++;
+            }
+        }
+        
         $query=new EGremlinScript;
         $query->setQuery(
                 'import org.neo4j.graphdb.index.*
@@ -340,7 +370,7 @@ class ENeo4jRelationship extends ENeo4jPropertyContainer
                 neo4j = g.getRawGraph()
                 idxManager = neo4j.index()
                 index = idxManager.forRelationships("'.$index.'")
-                query = new QueryContext("'.$indexQuery.'")
+                query = new QueryContext("'.$queryString.'")
                 results = index.query(query)');
         
         $responseData=$this->query($query)->getData();
