@@ -10,8 +10,8 @@
  */
 class ENeo4jRelationship extends ENeo4jPropertyContainer
 {
-    private $_startNode; //a container for the startNode object or the startNode id
-    private $_endNode; //a container for the endNode object or the endNode id
+    private $_startNode; //a container for the startNode object
+    private $_endNode; //a container for the endNode object
     private $_type;
 
     public static function model($className=__CLASS__)
@@ -60,12 +60,9 @@ class ENeo4jRelationship extends ENeo4jPropertyContainer
             throw new ENeo4jException('The relationship cannot be inserted because it is not new.',500);
 
         //check if one of the vital infos isn't there
-        if($this->_endNode==null || $this->_type==null || $this->_startNode==null)
+        if($this->endNode->self==null || $this->_type==null || $this->startNode==null)
             throw new ENeo4jException('You cannot save a relationship without defining type, startNode and endNode',500);
 
-        $startNodeId=$this->_startNode instanceOf ENeo4jNode ? $this->_startNode->id : $this->_startNode;
-        $endNodeId=$this->_endNode instanceOf ENeo4jNode ? $this->_endNode->id : $this->_endNode;
-        
         if($this->beforeSave())
         {
             Yii::trace(get_class($this).'.create()','ext.Neo4Yii.ENeo4jRelationship');
@@ -74,16 +71,16 @@ class ENeo4jRelationship extends ENeo4jPropertyContainer
             
             if(!empty($attributesToSend))
             {
-                $response=$this->postRequest($this->getSite().'/node/'.$startNodeId.'/relationships',array(),array(
-                    'to'=>$this->getSite().'/'.$endNodeId,
+                $response=$this->postRequest($this->getSite().'/node/'.$this->startNode->getId().'/relationships',array(),array(
+                    'to'=>$this->endNode->getId(),
                     'type'=>$this->_type,
                     'data'=>$attributesToSend
                 ));
             }
             else
             {
-                $response=$this->postRequest($this->getSite().'/node/'.$startNodeId.'/relationships',array(),array(
-                    'to'=>$this->getSite().'/'.$endNodeId,
+                $response=$this->postRequest($this->getSite().'/node/'.$this->startNode->getId().'/relationships',array(),array(
+                    'to'=>$this->endNode->getId(),
                     'type'=>$this->_type,
                 ));
             }
@@ -147,19 +144,19 @@ class ENeo4jRelationship extends ENeo4jPropertyContainer
     }
 
     /**
-     * Setter for the startNode
-     * @param mixed $node Either a node id or a ENeo4jNode model
+     * Setter for the startNode object
+     * @param ENeo4jNode $node
      */
-    public function setStartNode($node)
+    public function setStartNode(ENeo4jNode $node)
     {
         $this->_startNode=$node;
     }
 
     /**
-     * Setter for the endNode
-     * @param mixed $node Either a node id or a ENeo4jNode model
+     * Setter for the endNode object
+     * @param ENeo4jNode $node
      */
-    public function setEndNode($node)
+    public function setEndNode(ENeo4jNode $node)
     {
         $this->_endNode=$node;
     }
@@ -170,7 +167,7 @@ class ENeo4jRelationship extends ENeo4jPropertyContainer
      */
     public function getStartNode()
     {
-        if(isset($this->_startNode) && $this->_startNode instanceof ENeo4jNode)
+        if(isset($this->_startNode))
             return $this->_startNode;
         else
         {
@@ -191,7 +188,7 @@ class ENeo4jRelationship extends ENeo4jPropertyContainer
      */
     public function getEndNode()
     {
-        if(isset($this->_endNode) && $this->_endNode instanceof ENeo4jNode)
+        if(isset($this->_endNode))
             return $this->_endNode;
         else
         {

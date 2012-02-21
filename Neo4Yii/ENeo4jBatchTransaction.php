@@ -3,8 +3,8 @@
 class ENeo4jBatchTransaction
 {
     
-    private $_instances=array(); //this is an array of instances used within the transaction
-    private $_operations=array();
+    public $instances=array(); //this is an array of instances used within the transaction
+    public $operations=array();
     
     private $_connection;
     
@@ -25,7 +25,7 @@ class ENeo4jBatchTransaction
      */
     protected function addToInstances(ENeo4jPropertyContainer $propertyContainer)
     {
-        $this->_instances[$propertyContainer->batchId]=$propertyContainer;
+        $this->instances[$propertyContainer->batchId]=$propertyContainer;
     }
 
     /**
@@ -42,7 +42,7 @@ class ENeo4jBatchTransaction
         if(!$propertyContainer->getIsNewResource())
             return $this->addUpdateOperation($propertyContainer);
 
-        $propertyContainer->assignBatchId(count($this->_operations));
+        $propertyContainer->assignBatchId(count($this->operations));
         $this->addToInstances($propertyContainer);
                 
         switch($propertyContainer)
@@ -50,7 +50,7 @@ class ENeo4jBatchTransaction
             ////SAVING NODE
             case ($propertyContainer instanceof ENeo4jNode):
 
-                $this->_operations[]=array(
+                $this->operations[]=array(
                     'method'=>'POST',
                     'to'=>'/'.$propertyContainer->getResource(),
                     'body'=>$propertyContainer->getAttributesToSend(),
@@ -72,7 +72,7 @@ class ENeo4jBatchTransaction
                     //has data
                     if(!empty($attributesToSend))
                     {
-                        $this->_operations[]=array(
+                        $this->operations[]=array(
                             'method'=>'POST',
                             'to'=>'{'.$startNodeBatchId.'}/relationships',
                             'body'=>array(
@@ -84,7 +84,7 @@ class ENeo4jBatchTransaction
                     }
                     else //doesn't have data
                     {
-                        $this->_operations[]=array(
+                        $this->operations[]=array(
                             'method'=>'POST',
                             'to'=>'{'.$startNodeBatchId.'}/relationships',
                             'body'=>array(
@@ -99,7 +99,7 @@ class ENeo4jBatchTransaction
                     //has data
                     if(!empty($attributesToSend))
                     {
-                        $this->_operations[]=array(
+                        $this->operations[]=array(
                             'method'=>'POST',
                             'to'=>'{'.$startNodeBatchId.'}/relationships',
                             'body'=>array(
@@ -111,7 +111,7 @@ class ENeo4jBatchTransaction
                     }
                     else //doesn't have data
                     {
-                        $this->_operations[]=array(
+                        $this->operations[]=array(
                             'method'=>'POST',
                             'to'=>'{'.$startNodeBatchId.'}/relationships',
                             'body'=>array(
@@ -126,7 +126,7 @@ class ENeo4jBatchTransaction
                     //has data
                     if(!empty($attributesToSend))
                     {
-                        $this->_operations[]=array(
+                        $this->operations[]=array(
                             'method'=>'POST',
                             'to'=>$propertyContainer->startNode->self.'/relationships',
                             'body'=>array(
@@ -138,7 +138,7 @@ class ENeo4jBatchTransaction
                     }
                     else //doesn't have data
                     {
-                        $this->_operations[]=array(
+                        $this->operations[]=array(
                             'method'=>'POST',
                             'to'=>$propertyContainer->startNode->self.'/relationships',
                             'body'=>array(
@@ -153,7 +153,7 @@ class ENeo4jBatchTransaction
                     //has data
                     if(!empty($attributesToSend))
                     {
-                        $this->_operations[]=array(
+                        $this->operations[]=array(
                             'method'=>'POST',
                             'to'=>'/node/'.$propertyContainer->getStartNode()->getId().'/relationships',
                             'body'=>array(
@@ -166,7 +166,7 @@ class ENeo4jBatchTransaction
                     }
                     else //doesn't have data
                     {
-                        $this->_operations[]=array(
+                        $this->operations[]=array(
                             'method'=>'POST',
                             'to'=>'/node/'.$propertyContainer->getStartNode()->getId().'/relationships',
                             'body'=>array(
@@ -194,10 +194,10 @@ class ENeo4jBatchTransaction
         if($validate && !$propertyContainer->validate())
             throw new ENeo4jTransactionException('Transaction failure. One or more models did not validate!',500);
 
-        $propertyContainer->assignBatchId(count($this->_operations));
+        $propertyContainer->assignBatchId(count($this->operations));
         $this->addToInstances($propertyContainer);
 
-        $this->_operations[]=array(
+        $this->operations[]=array(
             'method'=>'PUT',
             'to'=>'/'.$propertyContainer->getResource().'/'.$propertyContainer->getId().'/properties',
             'body'=>$propertyContainer->getAttributesToSend(),
@@ -205,7 +205,7 @@ class ENeo4jBatchTransaction
         );
 
     }
-        
+    
     /**
      * Adds a node to a defined index with given attributes.
      * @param integer $nodeId The id of the node to be indexed.
@@ -215,13 +215,13 @@ class ENeo4jBatchTransaction
      */
     public function addNodeToIndexOperation($nodeId,$attributes,$index,$update=false)
     {
-        $batchId=count($this->_operations);
+        $batchId=count($this->operations);
         
         if($update)
         {
             foreach($attributes as $key=>$value)
             {
-                $this->_operations[]=array(
+                $this->operations[]=array(
                     'method'=>'DELETE',
                     'to'=>'/index/node/'.urlencode($index).'/'.urlencode($key).'/'.$nodeId,
                     'id'=>$batchId
@@ -231,7 +231,7 @@ class ENeo4jBatchTransaction
             
         foreach($attributes as $key=>$value)
         {
-            $this->_operations[]=array(
+            $this->operations[]=array(
                 'method'=>'POST',
                 'to'=>'/index/node/'.urlencode($index),
                 'body'=>array('uri'=>$this->getConnection()->site.'/'.$nodeId,'key'=>$key,'value'=>$value),
@@ -249,13 +249,13 @@ class ENeo4jBatchTransaction
      */
     public function addRelationshipToIndexOperation($relationshipId,$attributes,$index,$update=false)
     {
-        $batchId=count($this->_operations);
+        $batchId=count($this->operations);
         
         if($update)
         {
             foreach($attributes as $key=>$value)
             {
-                $this->_operations[]=array(
+                $this->operations[]=array(
                     'method'=>'DELETE',
                     'to'=>'/index/relationship/'.urlencode($index).'/'.urlencode($key).'/'.$relationshipId,
                     'id'=>$batchId
@@ -265,7 +265,7 @@ class ENeo4jBatchTransaction
             
         foreach($attributes as $key=>$value)
         {
-            $this->_operations[]=array(
+            $this->operations[]=array(
                 'method'=>'POST',
                 'to'=>'/index/relationship/'.urlencode($index),
                 'body'=>array('uri'=>$this->getConnection()->site.'/'.$relationshipId,'key'=>$key,'value'=>$value),
@@ -283,14 +283,14 @@ class ENeo4jBatchTransaction
      */
     public function addRemoveNodeFromIndexOperation($nodeId,$index,$attributes=array())
     {
-        $batchId=count($this->_operations);
+        $batchId=count($this->operations);
         
         if(!empty($attributes))
         {
             //only delete entries for given attributes
             foreach($attributes as $key=>$value)
             {
-                $this->_operations[]=array(
+                $this->operations[]=array(
                     'method'=>'DELETE',
                     'to'=>'/index/node/'.urlencode($index).'/'.$key.'/'.$nodeId,
                     'id'=>$batchId
@@ -300,7 +300,7 @@ class ENeo4jBatchTransaction
         else
         {
             //delete all entries for this property container
-            $this->_operations[]=array(
+            $this->operations[]=array(
                 'method'=>'DELETE',
                 'to'=>'/index/node/'.urlencode($index).'/'.$nodeId,
                 'id'=>$batchId
@@ -317,14 +317,14 @@ class ENeo4jBatchTransaction
      */
     public function addRemoveRelationshipFromIndexOperation($relationshipId,$index,$attributes=array())
     {
-        $batchId=count($this->_operations);
+        $batchId=count($this->operations);
         
         if(!empty($attributes))
         {
             //only delete entries for given attributes
             foreach($attributes as $key=>$value)
             {
-                $this->_operations[]=array(
+                $this->operations[]=array(
                     'method'=>'DELETE',
                     'to'=>'/index/relationship/'.urlencode($index).'/'.$key.'/'.$relationshipId,
                     'id'=>$batchId
@@ -334,7 +334,7 @@ class ENeo4jBatchTransaction
         else
         {
             //delete all entries for this property container
-            $this->_operations[]=array(
+            $this->operations[]=array(
                 'method'=>'DELETE',
                 'to'=>'/index/relationship/'.urlencode($index).'/'.$relationshipId,
                 'id'=>$batchId
@@ -346,10 +346,10 @@ class ENeo4jBatchTransaction
     {
         Yii::trace(get_class($this).'.execute()','ext.Neo4Yii.ENeo4jBatchTransaction');
 
-            if($this->_operations) //if there are any operations, send post request, otherwise ignore it as it would return an error by Neo4j
+            if($this->operations) //if there are any operations, send post request, otherwise ignore it as it would return an error by Neo4j
             {
                 //clean all batchIds of the objects we used during the transaction
-                foreach($this->_instances as $instance)
+                foreach($this->instances as $instance)
                 {
                     $instance->assignBatchId(null);
                 }
@@ -357,7 +357,7 @@ class ENeo4jBatchTransaction
                 $request=new EActiveResourceRequest;
                 $request->setUri($this->getConnection()->site.'/batch');
                 $request->setMethod('POST');
-                $request->setData($this->_operations);
+                $request->setData($this->operations);
                 
                 $response=$this->getConnection()->execute($request);
 
@@ -365,9 +365,9 @@ class ENeo4jBatchTransaction
                 {
                     //we check if any id that is coming back is connected to a propertyContainer in our instances array.
                     //If so we update the object and assign the idProperty (=self)
-                    if(isset($resp['id']) && isset($this->_instances[$resp['id']]) && isset($resp['body']['self']))
+                    if(isset($resp['id']) && isset($this->instances[$resp['id']]) && isset($resp['body']['self']))
                     {
-                        $instance=$this->_instances[$resp['id']];
+                        $instance=$this->instances[$resp['id']];
                         $propertyField=$instance->idProperty();
                         $instance->$propertyField=$resp['body']['self'];
                     }

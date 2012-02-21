@@ -406,13 +406,13 @@ class ENeo4jNode extends ENeo4jPropertyContainer
 
     /**
      * Add a relationship to another node
-     * @param mixed $node Either a node object to connect with or a node id which represents the endNode of this relationship
+     * @param ENeo4jNode $node The node object to connect with (will be the endNode of the relationship)
      * @param string $type The type of this relationship. something like 'HAS_NAME'. If this is the name of an existing relationship class this class will be instantiated, if not ENeo4jRelationship will be used
      * @param array $properties An array of properties used for the relationship. e.g.: array('since'=>'2010')
      *
      * @return ENeo4jRelationship
      */
-    public function addRelationshipTo($node, $type, array $properties=null)
+    public function addRelationshipTo(ENeo4jNode $node, $type, array $properties=null)
     {
         Yii::trace(
             get_class($this).'.addRelationshipTo()',
