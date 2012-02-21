@@ -320,11 +320,8 @@ class ENeo4jRelationship extends ENeo4jPropertyContainer
     
     
     /**
-     * Finds relationships according to a lucene query. The syntax is as follows
-     * <p>array('operator'=>array('key'=>'value'))
-     * <p>Were "operator" can either be AND or OR and the $key=>$value matches the lucene syntax 'key':'value'.
-     * <p>If supplying an array of the form array('key'=>'value') the operator will default to AND
-     * @param array $indexQuery An associative array reflecting the lucene query
+     * Finds relationships according to a lucene query
+     * @param string $indexQuery The query
      * @param string $index Optional name of the index to be used for searching. Defaults to the index defined via
      * indexName()
      * @return array An array of resulting nodes or empty array if no results were found
