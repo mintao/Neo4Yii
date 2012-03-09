@@ -1,5 +1,11 @@
 <?php
+/**
+ * @author Johannes "Haensel" Bauer
+ */
 
+/**
+ * ENeo4jBatchTransaction is used to use neo4j's batch api.
+ */
 class ENeo4jBatchTransaction
 {
     private $_operations=array();
@@ -11,11 +17,22 @@ class ENeo4jBatchTransaction
         $this->_connection=$connection;
     }
     
+    /**
+     * Returns the graph service object
+     * @return ENeo4jGraphService the graph service object 
+     */
     public function getConnection()
     {
         return $this->_connection;
     }
     
+    /**
+     * Add a custom operation to the current transaction and get the batchId in return
+     * @param string $method The http method to be used (GET,PUT,POST,DELETE)
+     * @param string $to The uri this operation is using. e.g.: '/index/node'
+     * @param array $body The body to be used by this operation
+     * @return int The batch id used for this operation 
+     */
     public function addOperation($method,$to,$body=array())
     {
         $batchId=count($this->_operations);
@@ -27,21 +44,41 @@ class ENeo4jBatchTransaction
         return $batchId;
     }
     
+    /**
+     * Get a single node
+     * @param int $node The node id
+     * @return int The batch id 
+     */
     public function getNode($node)
     {
         return $this->addOperation('GET','node/'.$node);
     }
     
+    /**
+     * Get a single relationship
+     * @param int $relationship The $relationship id
+     * @return int The batch id 
+     */
     public function getRelationship($relationship)
     {
         return $this->addOperation('GET','relationship/'.$relationship);
     }
     
+    /**
+     * Create a new node
+     * @param array $attributes The attributes for this node
+     * @return int The batch id 
+     */
     public function createNode($attributes=array())
     {
         return $this->addOperation('POST','node',$attributes);
     }
     
+    /**
+     * Create a new relationship
+     * @param array $attributes The attributes for this relationship
+     * @return int The batch id 
+     */
     public function createRelationship($fromNode,$toNode,$type,$attributes=array())
     {
         if(strpos($fromNode,'{')===false)
@@ -54,11 +91,21 @@ class ENeo4jBatchTransaction
             return $this->addOperation('POST',$fromNode.'/relationships',array('to'=>$toNode,'type'=>$type,'data'=>$attributes));
     }
     
+    /**
+     * Delete a node
+     * @param int $node The node id
+     * @return int The batch id 
+     */
     public function deleteNode($node)
     {
         return $this->addOperation('DELETE','node/'.$node);
     }
     
+    /**
+     * Delete a relationship
+     * @param int $relationship The relationship id
+     * @return int The batch id 
+     */
     public function deleteRelationship($relationship)
     {
         return $this->addOperation('DELETE','relationship/'.$relationship);
@@ -146,6 +193,10 @@ class ENeo4jBatchTransaction
         }
     }
 
+    /**
+     * Execute the current transaction and receive the results according to the batch ids used per operation
+     * @return mixed an array of results 
+     */
     public function execute()
     {
         Yii::trace(get_class($this).'.execute()','ext.Neo4Yii.ENeo4jBatchTransaction');
