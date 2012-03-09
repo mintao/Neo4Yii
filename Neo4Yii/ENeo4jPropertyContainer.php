@@ -117,7 +117,7 @@ abstract class ENeo4jPropertyContainer extends EActiveResource
     public function getId()
     {
         $uri=$this->self;
-        return end($explodedUri=explode('/',$uri));
+        return (int)end($explodedUri=explode('/',$uri));
     }
     
     /**
