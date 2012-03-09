@@ -287,23 +287,15 @@ class ENeo4jRelationship extends ENeo4jPropertyContainer
                 neo4j = g.getRawGraph()
                 idxManager = neo4j.index()
                 index = idxManager.forRelationships("'.$index.'")
-                hits = index.get("'.$key.'", "'.$value.'")
-                try
-                 {
-                     Relationship result = null;
-                     int count=0;
-                     for ( Rekationship rel : hits )
-                     {
-                         count++;
-                         result=rel;
-                         if ( count >= 1 ) break;
-                     }
-                 }
-                 finally
-                 {
-                     hits.close();
-                     return result;
-                 }'
+                ArrayList<Relationship> results = new ArrayList<Relationship>();
+                int count = 0;
+                for ( Relationship rel : index.query("'.$this->getModelClassField().':'.get_class($this).' AND '.$key.':'.$value.'") )
+                {
+                    count++;
+                    results.add( rel );
+                    if ( count >= 1 ) break;
+                }
+                return results;'
                 
                 );
         $responseData=$this->query($query)->getData();
@@ -335,7 +327,7 @@ class ENeo4jRelationship extends ENeo4jPropertyContainer
                 index = idxManager.forRelationships("'.$index.'")
                 ArrayList<Relationship> results = new ArrayList<Relationship>();
                 int count = 0;
-                for ( Relationship rel : index.query("'.$key.'", "'.$value.'") )
+                for ( Relationship rel : index.query("'.$this->getModelClassField().':'.get_class($this).' AND '.$key.':'.$value.'") )
                 {
                     count++;
                     results.add( rel );

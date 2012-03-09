@@ -246,23 +246,15 @@ class ENeo4jNode extends ENeo4jPropertyContainer
                 neo4j = g.getRawGraph()
                 idxManager = neo4j.index()
                 index = idxManager.forNodes("'.$index.'")
-                hits = index.get("'.$key.'", "'.$value.'")
-                try
-                 {
-                     Node result = null;
-                     int count=0;
-                     for ( Node node : hits )
-                     {
-                         count++;
-                         result=node;
-                         if ( count >= 1 ) break;
-                     }
-                 }
-                 finally
-                 {
-                     hits.close();
-                     return result;
-                 }'
+                ArrayList<Node> results = new ArrayList<Node>();
+                int count = 0;
+                for ( Node node : index.query("'.$this->getModelClassField().':'.get_class($this).' AND '.$key.':'.$value.'") )
+                {
+                    count++;
+                    results.add( node );
+                    if ( count >= 1 ) break;
+                }
+                return results;'
                 );
         $responseData=$this->query($query)->getData();
         
@@ -293,7 +285,7 @@ class ENeo4jNode extends ENeo4jPropertyContainer
                 index = idxManager.forNodes("'.$index.'")
                 ArrayList<Node> results = new ArrayList<Node>();
                 int count = 0;
-                for ( Node node : index.query("'.$key.'", "'.$value.'") )
+                for ( Node node : index.query("'.$this->getModelClassField().':'.get_class($this).' AND '.$key.':'.$value.'") )
                 {
                     count++;
                     results.add( node );
