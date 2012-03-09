@@ -353,18 +353,21 @@ class ENeo4jNode extends ENeo4jPropertyContainer
     }
 
     /**
-     * Finds all models of the named class via gremlin iterator g.V
+     * Finds all models of the named class via an index query on the modelclass attribute
+     * @param int $limit Limit the number of results. Defaults to 100
      * @return array An array of model objects, empty if none are found
      */
-    public function findAll()
+    public function findAll($limit=100)
     {
         Yii::trace(get_class($this).'.findAll()','ext.Neo4Yii.ENeo4jNode');
+        
+        /* DEPRECATED WAY: Iterate over all nodes, filtering by modelclass attribute
         $gremlinQuery=new EGremlinScript;
 
         $gremlinQuery->setQuery('g.V._().filter{it.'.$this->getModelClassField().'=="'.get_class($this).'"}');
         $responseData=$this->query($gremlinQuery)->getData();
-
-        return self::model()->populateRecords($responseData);
+        */
+        return $this->findAllByExactIndexEntry($this->getModelClassField(),get_class($this),$this->indexName(),$limit);
     }
 
     /**
