@@ -85,7 +85,11 @@ abstract class ENeo4jPropertyContainer extends EActiveResource
      */
     public function indexName()
     {
-        return get_class($this);
+        if($this instanceof ENeo4jNode)
+            return 'node_auto_index';
+        else
+            return 'relationship_auto_index';
+        //return get_class($this);
     }
     
     /**

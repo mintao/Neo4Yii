@@ -129,7 +129,7 @@ class ENeo4jRelationship extends ENeo4jPropertyContainer
     }
 
     /**
-     * Finds all models of the named class via an index query on the modelclass attribute
+     * Finds all models of the named class via a gremlin iterator g.E filtering on the modelclass attribute
      * @param int $limit Limit the number of results. Defaults to 100
      * @return array An array of model objects, empty if none are found
      */
@@ -137,18 +137,17 @@ class ENeo4jRelationship extends ENeo4jPropertyContainer
     {
         Yii::trace(get_class($this).'.findAll()','ext.Neo4Yii.ENeo4jRelationship');
         
-        /* DEPRECATED WAY: Iterate of g.E and filter by modelclass attribute => bad performance
         $gremlinQuery=new EGremlinScript;
-        $gremlinQuery->setQuery('g.E._().filter{it.getLabel()=="'.get_class($this).'"}');
+        if(is_integer($limit))
+            $gremlinQuery->setQuery('g.E._().filter{it.getLabel()=="'.get_class($this).'"}[0..'.$limit.']');
+        else
+            $gremlinQuery->setQuery('g.E._().filter{it.getLabel()=="'.get_class($this).'"}');
         if (__CLASS__ === get_class($this)) {
             $gremlinQuery->setQuery('g.E._()');
         }
         $responseData=$this->query($gremlinQuery)->getData();
 
-        return self::model()->populateRecords($responseData);
-         */
-        
-        return $this->findAllByExactIndexEntry($this->getModelClassField(),get_class($this),$this->indexName(),$limit);
+        return self::model()->populateRecords($responseData);        
     }
 
     /**
