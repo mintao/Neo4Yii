@@ -1,6 +1,7 @@
 #CHANGES:
 
-March-09-2012:
+###March-09-2012:
+
 1. getId() returns integer values:
 https://github.com/Haensel/Neo4Yii/commit/456da853afddd18aebdf9ad7c1c1ae3792ae7290
 
