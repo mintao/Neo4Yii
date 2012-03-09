@@ -246,7 +246,23 @@ class ENeo4jNode extends ENeo4jPropertyContainer
                 neo4j = g.getRawGraph()
                 idxManager = neo4j.index()
                 index = idxManager.forNodes("'.$index.'")
-                results = index.get("'.$key.'", "'.$value.'")[0]'
+                hits = index.get("'.$key.'", "'.$value.'")
+                try
+                 {
+                     Node result = null;
+                     int count=0;
+                     for ( Node node : hits )
+                     {
+                         count++;
+                         result=node;
+                         if ( count >= 1 ) break;
+                     }
+                 }
+                 finally
+                 {
+                     hits.close();
+                     return result;
+                 }'
                 );
         $responseData=$this->query($query)->getData();
         
@@ -259,9 +275,10 @@ class ENeo4jNode extends ENeo4jPropertyContainer
      * @param string $key The key
      * @param string $value The value
      * @param string $index Optional index name. If null the default index will be used
+     * @param int $limit Limit the number of returned results. Defaults to 20
      * @return array An array of nodes, or an empty array if none were found 
      */
-    public function findAllByExactIndexEntry($key,$value,$index=null)
+    public function findAllByExactIndexEntry($key,$value,$index=null,$limit=20)
     {
         Yii::trace(get_class($this).'.findAllByExactIndexEntry()','ext.Neo4Yii.ENeo4jNode');
         if(is_null($index))
@@ -274,8 +291,16 @@ class ENeo4jNode extends ENeo4jPropertyContainer
                 neo4j = g.getRawGraph()
                 idxManager = neo4j.index()
                 index = idxManager.forNodes("'.$index.'")
-                results = index.get("'.$key.'", "'.$value.'")'
-                );
+                ArrayList<Node> results = new ArrayList<Node>();
+                int count = 0;
+                for ( Node node : index.query("'.$key.'", "'.$value.'") )
+                {
+                    count++;
+                    results.add( node );
+                    if ( count >= '.(int)$limit.' ) break;
+                }
+                return results;
+             ');
         $responseData=$this->query($query)->getData();
         
         return ENeo4jNode::model()->populateRecords($responseData);
@@ -289,7 +314,7 @@ class ENeo4jNode extends ENeo4jPropertyContainer
      * indexName()
      * @return array An array of resulting nodes or empty array if no results were found
      */
-    public function findByIndexQuery($indexQuery,$index=null)
+    public function findByIndexQuery($indexQuery,$index=null,$limit=20)
     {
         Yii::trace(get_class($this).'.findByIndexQuery()','ext.Neo4Yii.ENeo4jNode');
         if(is_null($index))
@@ -304,7 +329,7 @@ class ENeo4jNode extends ENeo4jPropertyContainer
                 neo4j = g.getRawGraph()
                 idxManager = neo4j.index()
                 index = idxManager.forNodes("'.$index.'")
-                query = new QueryContext("'.$indexQuery.'")
+                query = new QueryContext("'.$indexQuery.'").top('.$limit.')
                 results = index.query(query)');
         
         $responseData=$this->query($query)->getData();
