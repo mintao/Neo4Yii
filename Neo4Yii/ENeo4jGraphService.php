@@ -108,7 +108,7 @@ class ENeo4jGraphService extends EActiveResourceConnection
     {
         Yii::trace(get_class($this).'.addNodeToIndex()','ext.Neo4Yii.ENeo4jGraphService');
         $trans=$this->createBatchTransaction();
-        $trans->addNodeToIndexOperation($nodeId,$attributes,$index,$update);
+        $trans->indexNode($nodeId,$attributes,$index,$update);
         $trans->execute();       
     }
     
@@ -122,7 +122,7 @@ class ENeo4jGraphService extends EActiveResourceConnection
     {
         Yii::trace(get_class($this).'.removeNodeFromIndex()','ext.Neo4Yii.ENeo4jGraphService');
         $trans=$this->createBatchTransaction();
-        $trans->addRemoveNodeFromIndexOperation($nodeId,$index,$attributes);
+        $trans->removeNodeFromIndex($nodeId,$index,$attributes);
         $trans->execute();    
     }
     
@@ -137,7 +137,7 @@ class ENeo4jGraphService extends EActiveResourceConnection
     {
         Yii::trace(get_class($this).'.addRelationshipToIndex()','ext.Neo4Yii.ENeo4jGraphService');
         $trans=$this->createBatchTransaction();
-        $trans->addRelationshipToIndexOperation($relationshipId,$attributes,$index,$update);
+        $trans->indexRelationship($relationshipId,$attributes,$index,$update);
         $trans->execute();       
     }
     
@@ -151,7 +151,7 @@ class ENeo4jGraphService extends EActiveResourceConnection
     {
         Yii::trace(get_class($this).'.removeRelationshipFromIndex()','ext.Neo4Yii.ENeo4jGraphService');
         $trans=$this->createBatchTransaction();
-        $trans->addRemoveRelationshipFromIndexOperation($relationshipId,$index,$attributes);
+        $trans->removeRelationshipFromIndex($relationshipId,$index,$attributes);
         $trans->execute();    
     }    
 }

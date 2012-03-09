@@ -12,7 +12,6 @@
 abstract class ENeo4jPropertyContainer extends EActiveResource
 {    
     public $self; //always contains the full uri. If you need the id use getId() instead.
-    public $batchId; //this is used when using the ENeo4jBatchTransaction. Each property container gets an id to be uniquely identified
     
     protected static $_connection;
     
@@ -87,11 +86,6 @@ abstract class ENeo4jPropertyContainer extends EActiveResource
     public function indexName()
     {
         return get_class($this);
-    }
-    
-    public function assignBatchId($id)
-    {
-        $this->batchId=$id;
     }
     
     /**
