@@ -153,6 +153,32 @@ class ENeo4jNode extends ENeo4jPropertyContainer
 
         return $this->_traversed[$name];
     }
+    
+    /**
+     * Populates traversed property containers. This method adds a traversed propertycontainer to this node.
+     * @param string $name attribute name
+     * @param mixed $propertyContainer the traversed property container
+     * @param mixed $index the index value in the traversed object collection.
+     * If true, it means using zero-based integer index.
+     * If false, it means a HAS_ONE object and no index is needed.
+     */
+    public function addTraversedPropertyContainer($name,$propertyContainer,$index)
+    {
+        if($index!==false)
+        {
+            if(!isset($this->_traversed[$name]))
+                $this->_traversed[$name]=array();
+            if($propertyContainer instanceof ENeo4jPropertyContainer)
+            {
+                if($index===true)
+                    $this->_traversed[$name][]=$propertyContainer;
+                else
+                    $this->_traversed[$name][$index]=$propertyContainer;
+            }
+        }
+        else if(!isset($this->_traversed[$name]))
+            $this->_traversed[$name]=$propertyContainer;
+    }
 
     /**
      * Finds a single property container with the specified id within the modelclass index.
