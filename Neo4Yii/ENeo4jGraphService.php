@@ -35,7 +35,7 @@ class ENeo4jGraphService extends EActiveResourceConnection
         $request=new EActiveResourceRequest;
         $request->setUri($this->site.'/ext/GremlinPlugin/graphdb/execute_script');
         $request->setMethod('POST');
-        $request->setData(array('script'=>$gremlin->toString()));
+        $request->setData(array('script'=>$gremlin->toString(),'params'=>$gremlin->getParams()));
         $response=$this->query($request);
 
         return $response;
