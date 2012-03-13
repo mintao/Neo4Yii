@@ -299,7 +299,10 @@ abstract class ENeo4jPropertyContainer extends EActiveResource
         if($this->enableAutoIndexing)
         {
             $tx=$this->getConnection()->createBatchTransaction();
-            $tx->indexNode($this->id,$this->autoIndexAttributes(),$this->indexName());
+            if($this instanceof ENeo4jNode)
+                $tx->indexNode($this->id,$this->autoIndexAttributes(),$this->indexName());
+            else
+                $tx->indexRelationship($this->id,$this->autoIndexAttributes(),$this->indexName());
             $tx->execute();
         }
         return parent::afterSave();
