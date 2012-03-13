@@ -116,7 +116,9 @@ class ENeo4jRelationship extends ENeo4jPropertyContainer
     {
         Yii::trace(get_class($this).'.findById()','ext.Neo4Yii.ENeo4jRelationship');
         $gremlinQuery=new EGremlinScript;
-        $gremlinQuery->setQuery('g.e('.$id.')._().filter{it.getLabel()=="'.get_class($this).'"}');
+        $gremlinQuery->setQuery('g.e(startEdge)._().filter{it.getLabel()==label}');
+        $gremlinQuery->setParam('startEdge',(int)$id);
+        $gremlinQuery->setParam('label',get_class($this));
         $response=$this->query($gremlinQuery);
         $responseData=$response->getData();
         if(isset($responseData[0]))
@@ -295,7 +297,7 @@ class ENeo4jRelationship extends ENeo4jPropertyContainer
                     results.add( rel );
                     if ( count >= 1 ) break;
                 }
-                return results;'
+                return results[0];'
                 
                 );
         $responseData=$this->query($query)->getData();
