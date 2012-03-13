@@ -12,7 +12,7 @@
 abstract class ENeo4jPropertyContainer extends EActiveResource
 {    
     public $self; //always contains the full uri. If you need the id use getId() instead.
-    
+    public $enableAutoIndexing=true;
     protected static $_connection;
     
     /**
@@ -85,11 +85,15 @@ abstract class ENeo4jPropertyContainer extends EActiveResource
      */
     public function indexName()
     {
+        return get_class($this);
+    }
+    
+    public function autoIndexAttributes()
+    {
         if($this instanceof ENeo4jNode)
-            return 'node_auto_index';
+            return array($this->getModelClassField(),$this->{$this->getModelClassField()});
         else
-            return 'relationship_auto_index';
-        //return get_class($this);
+            return array('type',get_class($this));
     }
     
     /**
@@ -288,6 +292,17 @@ abstract class ENeo4jPropertyContainer extends EActiveResource
     {
         $this->beforeFind();
         return $this->getConnection()->queryByGremlin($query);
+    }
+    
+    public function afterSave()
+    {
+        if($this->enableAutoIndexing)
+        {
+            $tx=$this->getConnection()->createBatchTransaction();
+            $tx->indexNode($this->id,$this->autoIndexAttributes(),$this->indexName());
+            $tx->execute();
+        }
+        return parent::afterSave();
     }
 
 }
