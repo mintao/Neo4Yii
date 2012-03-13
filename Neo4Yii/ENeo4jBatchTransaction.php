@@ -118,7 +118,7 @@ class ENeo4jBatchTransaction
      * @param string $index The name of the index to be used
      * @param boolean $update Set to true if you want to replace existing index entries. Defaults to false, meaning adding index entries, even if they already exist
      */
-    public function indexNode($nodeId,$attributes,$index,$update=false)
+    public function indexNode($nodeId,$attributes=array(),$index,$update=false)
     {
         if($update)
         {
