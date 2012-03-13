@@ -118,7 +118,8 @@ class ENeo4jNode extends ENeo4jPropertyContainer
         unset($this->_traversed[$name]);
 
         $query=new EGremlinScript;
-        $query->setQuery('g.v('.$this->getId().').'.$traversal[2]);
+        $query->setQuery('g.v(startNode).'.$traversal[2]);
+        $query->setParam('startNode', $this->id);
 
         $resultData=$this->query($query)->getData();
 
@@ -129,15 +130,18 @@ class ENeo4jNode extends ENeo4jPropertyContainer
         {
             if($traversal[0]==self::HAS_ONE && isset($resultData[0]))
                 $this->_traversed[$name]=ENeo4jPath::populatePath($resultData[0]);
-            if($traversal[0]==self::HAS_MANY && isset($resultData[0]))
+            if($traversal[0]==self::HAS_MANY && isset($resultData[0]) && is_array($resultData[0]))
                 $this->_traversed[$name]=ENeo4jPath::populatePaths($resultData);
         }
         else
         {
             if($traversal[0]==self::HAS_ONE && isset($resultData[0]))
                 $this->_traversed[$name]=$class::model()->populateRecord($resultData[0]);
-            if($traversal[0]==self::HAS_MANY && isset($resultData[0]))
+            if($traversal[0]==self::HAS_MANY && isset($resultData[0]) && is_array($resultData[0]))
+            {
+                Yii::trace($resultData[0],'TEST');
                 $this->_traversed[$name]=$class::model()->populateRecords($resultData);
+            }
         }
         if(!isset($this->_traversed[$name]))
         {
@@ -163,7 +167,8 @@ class ENeo4jNode extends ENeo4jPropertyContainer
         Yii::trace(get_class($this).'.findById()','ext.Neo4Yii.ENeo4jNode');
         $gremlinQuery=new EGremlinScript;
 
-        $gremlinQuery->setQuery('g.v('.$id.')._().filter{it.'.$this->getModelClassField().'=="'.get_class($this).'"}');
+        $gremlinQuery->setQuery('g.v(startNode)._().filter{it.'.$this->getModelClassField().'=="'.get_class($this).'"}');
+        $gremlinQuery->setParam('startNode', (int)$id);
         $responseData=$this->query($gremlinQuery)->getData();
 
         if(isset($responseData[0]))
@@ -254,7 +259,7 @@ class ENeo4jNode extends ENeo4jPropertyContainer
                     results.add( node );
                     if ( count >= 1 ) break;
                 }
-                return results;'
+                return results[0];'
                 );
         $responseData=$this->query($query)->getData();
         
