@@ -271,11 +271,11 @@ class ENeo4jNode extends ENeo4jPropertyContainer
      * via ENeo4jPropertyContainer::indexName() will be used which matches the classname of the node.
      * @param string $key The key
      * @param string $value The value
-     * @param string $index Optional index name. If null the default index will be used
      * @param int $limit Limit the number of returned results. Defaults to 20
+     * @param string $index Optional index name. If null the default index will be used
      * @return array An array of nodes, or an empty array if none were found 
      */
-    public function findAllByExactIndexEntry($key,$value,$index=null,$limit=20)
+    public function findAllByExactIndexEntry($key,$value,$limit=20,$index=null)
     {
         Yii::trace(get_class($this).'.findAllByExactIndexEntry()','ext.Neo4Yii.ENeo4jNode');
         if(is_null($index))
@@ -307,11 +307,12 @@ class ENeo4jNode extends ENeo4jPropertyContainer
     /**
      * Finds nodes according to a lucene query
      * @param string $indexQuery The query
+     * @param int $limit The number of results to be returned
      * @param string $index Optional name of the index to be used for searching. Defaults to the index defined via
      * indexName()
      * @return array An array of resulting nodes or empty array if no results were found
      */
-    public function findByIndexQuery($indexQuery,$index=null,$limit=20)
+    public function findByIndexQuery($indexQuery,$limit=20,$index=null)
     {
         Yii::trace(get_class($this).'.findByIndexQuery()','ext.Neo4Yii.ENeo4jNode');
         if(is_null($index))
@@ -364,7 +365,7 @@ class ENeo4jNode extends ENeo4jPropertyContainer
         $gremlinQuery->setQuery('g.V._().filter{it.'.$this->getModelClassField().'=="'.get_class($this).'"}');
         $responseData=$this->query($gremlinQuery)->getData();
         */
-        return $this->findAllByExactIndexEntry($this->getModelClassField(),get_class($this),$this->indexName(),$limit);
+        return $this->findAllByExactIndexEntry($this->getModelClassField(),get_class($this),$limit,$this->indexName());
     }
 
     /**
