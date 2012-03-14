@@ -91,9 +91,9 @@ abstract class ENeo4jPropertyContainer extends EActiveResource
     public function autoIndexAttributes()
     {
         if($this instanceof ENeo4jNode)
-            return array($this->getModelClassField(),$this->{$this->getModelClassField()});
+            return array($this->getModelClassField()=>$this->{$this->getModelClassField()});
         else
-            return array('type',get_class($this));
+            return array('type'=>get_class($this));
     }
     
     /**
