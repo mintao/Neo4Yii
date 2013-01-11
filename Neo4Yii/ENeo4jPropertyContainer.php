@@ -12,8 +12,7 @@
 abstract class ENeo4jPropertyContainer extends EActiveResource
 {    
     public $self; //always contains the full uri. If you need the id use getId() instead.
-    public $batchId; //this is used when using the ENeo4jBatchTransaction. Each property container gets an id to be uniquely identified
-    
+    public $enableAutoIndexing=true;
     protected static $_connection;
     
     /**
@@ -80,9 +79,21 @@ abstract class ENeo4jPropertyContainer extends EActiveResource
         ));
     }
     
-    public function assignBatchId($id)
+    /**
+     * Override this method to define an default index that will be used by all finder methods used for index querying
+     * @return string The name of the index as string. Defaults to the classname
+     */
+    public function indexName()
     {
-        $this->batchId=$id;
+        return get_class($this);
+    }
+    
+    public function autoIndexAttributes()
+    {
+        if($this instanceof ENeo4jNode)
+            return array($this->getModelClassField()=>$this->{$this->getModelClassField()});
+        else
+            return array('type'=>get_class($this));
     }
     
     /**
@@ -108,7 +119,7 @@ abstract class ENeo4jPropertyContainer extends EActiveResource
     public function getId()
     {
         $uri=$this->self;
-        return end($explodedUri=explode('/',$uri));
+        return (int)end($explodedUri=explode('/',$uri));
     }
     
     /**
@@ -281,6 +292,20 @@ abstract class ENeo4jPropertyContainer extends EActiveResource
     {
         $this->beforeFind();
         return $this->getConnection()->queryByGremlin($query);
+    }
+    
+    public function afterSave()
+    {
+        if($this->enableAutoIndexing)
+        {
+            $tx=$this->getConnection()->createBatchTransaction();
+            if($this instanceof ENeo4jNode)
+                $tx->indexNode($this->id,$this->autoIndexAttributes(),$this->indexName());
+            else
+                $tx->indexRelationship($this->id,$this->autoIndexAttributes(),$this->indexName());
+            $tx->execute();
+        }
+        return parent::afterSave();
     }
 
 }

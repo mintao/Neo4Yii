@@ -118,17 +118,31 @@ class ENeo4jNode extends ENeo4jPropertyContainer
         unset($this->_traversed[$name]);
 
         $query=new EGremlinScript;
-        $query->setQuery('g.v('.$this->getId().').'.$traversal[2]);
+        $query->setQuery('g.v(startNode).'.$traversal[2]);
+        $query->setParam('startNode', $this->id);
 
-        $resultData=$this->getConnection()->queryByGremlin($query)->getData();
+        $resultData=$this->query($query)->getData();
 
         $class=$traversal[1];
 
-        if($traversal[0]==self::HAS_ONE && isset($resultData[0]))
-            $this->_traversed[$name]=$class::model()->populateRecord($resultData[0]);
-        if($traversal[0]==self::HAS_MANY && isset($resultData[0]))
-            $this->_traversed[$name]=$class::model()->populateRecords($resultData);
-
+        //if this is a path do not use model()
+        if($class==self::PATH)
+        {
+            if($traversal[0]==self::HAS_ONE && isset($resultData[0]))
+                $this->_traversed[$name]=ENeo4jPath::populatePath($resultData[0]);
+            if($traversal[0]==self::HAS_MANY && isset($resultData[0]) && is_array($resultData[0]))
+                $this->_traversed[$name]=ENeo4jPath::populatePaths($resultData);
+        }
+        else
+        {
+            if($traversal[0]==self::HAS_ONE && isset($resultData[0]))
+                $this->_traversed[$name]=$class::model()->populateRecord($resultData[0]);
+            if($traversal[0]==self::HAS_MANY && isset($resultData[0]) && is_array($resultData[0]))
+            {
+                Yii::trace($resultData[0],'TEST');
+                $this->_traversed[$name]=$class::model()->populateRecords($resultData);
+            }
+        }
         if(!isset($this->_traversed[$name]))
         {
             if($traversal[0]==self::HAS_MANY)
@@ -138,6 +152,32 @@ class ENeo4jNode extends ENeo4jPropertyContainer
         }
 
         return $this->_traversed[$name];
+    }
+    
+    /**
+     * Populates traversed property containers. This method adds a traversed propertycontainer to this node.
+     * @param string $name attribute name
+     * @param mixed $propertyContainer the traversed property container
+     * @param mixed $index the index value in the traversed object collection.
+     * If true, it means using zero-based integer index.
+     * If false, it means a HAS_ONE object and no index is needed.
+     */
+    public function addTraversedPropertyContainer($name,$propertyContainer,$index)
+    {
+        if($index!==false)
+        {
+            if(!isset($this->_traversed[$name]))
+                $this->_traversed[$name]=array();
+            if($propertyContainer instanceof ENeo4jPropertyContainer)
+            {
+                if($index===true)
+                    $this->_traversed[$name][]=$propertyContainer;
+                else
+                    $this->_traversed[$name][$index]=$propertyContainer;
+            }
+        }
+        else if(!isset($this->_traversed[$name]))
+            $this->_traversed[$name]=$propertyContainer;
     }
 
     /**
@@ -153,7 +193,8 @@ class ENeo4jNode extends ENeo4jPropertyContainer
         Yii::trace(get_class($this).'.findById()','ext.Neo4Yii.ENeo4jNode');
         $gremlinQuery=new EGremlinScript;
 
-        $gremlinQuery->setQuery('g.v('.$id.')._().filter{it.'.$this->getModelClassField().'=="'.get_class($this).'"}');
+        $gremlinQuery->setQuery('g.v(startNode)._().filter{it.'.$this->getModelClassField().'=="'.get_class($this).'"}');
+        $gremlinQuery->setParam('startNode', (int)$id);
         $responseData=$this->query($gremlinQuery)->getData();
 
         if(isset($responseData[0]))
@@ -215,7 +256,111 @@ class ENeo4jNode extends ENeo4jPropertyContainer
 
         return self::model()->populateRecords($responseData);
     }
-
+    
+    /**
+     * Finds a single node exactly matching the supplied key=>value pair. If no index name is supplied the index defined
+     * via ENeo4jPropertyContainer::indexName() will be used which matches the classname of the node.
+     * @param string $key The key
+     * @param string $value The value
+     * @param string $index Optional index name. If null the default index will be used
+     * @return ENeo4jNode The resulting node, or null if none was found 
+     */
+    public function findByExactIndexEntry($key,$value,$index=null)
+    {
+        Yii::trace(get_class($this).'.findByExactIndexEntry()','ext.Neo4Yii.ENeo4jNode');
+        if(is_null($index))
+            $index=$this->indexName();
+        $query=new EGremlinScript;
+        $query->setQuery(
+                'import org.neo4j.graphdb.index.*
+                import org.neo4j.graphdb.*
+                neo4j = g.getRawGraph()
+                idxManager = neo4j.index()
+                index = idxManager.forNodes("'.$index.'")
+                ArrayList<Node> results = new ArrayList<Node>();
+                int count = 0;
+                for ( Node node : index.query("'.$this->getModelClassField().':'.get_class($this).' AND '.$key.':'.$value.'") )
+                {
+                    count++;
+                    results.add( node );
+                    if ( count >= 1 ) break;
+                }
+                return results[0];'
+                );
+        $responseData=$this->query($query)->getData();
+        
+        return ENeo4jNode::model()->populateRecord($responseData);
+    }
+    
+    /**
+     * Finds all nodes exactly matching the supplied key=>value pair. If no index name is supplied the index defined
+     * via ENeo4jPropertyContainer::indexName() will be used which matches the classname of the node.
+     * @param string $key The key
+     * @param string $value The value
+     * @param int $limit Limit the number of returned results. Defaults to 20
+     * @param string $index Optional index name. If null the default index will be used
+     * @return array An array of nodes, or an empty array if none were found 
+     */
+    public function findAllByExactIndexEntry($key,$value,$limit=20,$index=null)
+    {
+        Yii::trace(get_class($this).'.findAllByExactIndexEntry()','ext.Neo4Yii.ENeo4jNode');
+        if(is_null($index))
+            $index=$this->indexName();
+        
+        $query=new EGremlinScript;
+        $query->setQuery(
+                'import org.neo4j.graphdb.index.*
+                import org.neo4j.graphdb.*
+                neo4j = g.getRawGraph()
+                idxManager = neo4j.index()
+                index = idxManager.forNodes("'.$index.'")
+                ArrayList<Node> results = new ArrayList<Node>();
+                int count = 0;
+                for ( Node node : index.query("'.$this->getModelClassField().':'.get_class($this).' AND '.$key.':'.$value.'") )
+                {
+                    count++;
+                    results.add( node );
+                    if ( count >= '.(int)$limit.' ) break;
+                }
+                return results;
+             ');
+        $responseData=$this->query($query)->getData();
+        
+        return ENeo4jNode::model()->populateRecords($responseData);
+    }
+    
+    
+    /**
+     * Finds nodes according to a lucene query
+     * @param string $indexQuery The query
+     * @param int $limit The number of results to be returned
+     * @param string $index Optional name of the index to be used for searching. Defaults to the index defined via
+     * indexName()
+     * @return array An array of resulting nodes or empty array if no results were found
+     */
+    public function findByIndexQuery($indexQuery,$limit=20,$index=null)
+    {
+        Yii::trace(get_class($this).'.findByIndexQuery()','ext.Neo4Yii.ENeo4jNode');
+        if(is_null($index))
+            $index=$this->indexName();
+        
+        $query=new EGremlinScript;
+        $query->setQuery(
+                'import org.neo4j.graphdb.index.*
+                import org.neo4j.graphdb.*
+                import org.neo4j.index.lucene.*
+                import org.apache.lucene.search.*
+                neo4j = g.getRawGraph()
+                idxManager = neo4j.index()
+                index = idxManager.forNodes("'.$index.'")
+                query = new QueryContext("'.$indexQuery.'").top('.$limit.')
+                results = index.query(query)');
+        
+        $responseData=$this->query($query)->getData();
+        
+        return ENeo4jNode::model()->populateRecords($responseData);
+    }
+    
     /**
      * Find all models of the named class via custom gremlin query
      * @param type $query
@@ -232,18 +377,21 @@ class ENeo4jNode extends ENeo4jPropertyContainer
     }
 
     /**
-     * Finds all models of the named class via gremlin iterator g.V
+     * Finds all models of the named class via an index query on the modelclass attribute
+     * @param int $limit Limit the number of results. Defaults to 100
      * @return array An array of model objects, empty if none are found
      */
-    public function findAll()
+    public function findAll($limit=100)
     {
         Yii::trace(get_class($this).'.findAll()','ext.Neo4Yii.ENeo4jNode');
+        
+        /* DEPRECATED WAY: Iterate over all nodes, filtering by modelclass attribute
         $gremlinQuery=new EGremlinScript;
 
         $gremlinQuery->setQuery('g.V._().filter{it.'.$this->getModelClassField().'=="'.get_class($this).'"}');
         $responseData=$this->query($gremlinQuery)->getData();
-
-        return self::model()->populateRecords($responseData);
+        */
+        return $this->findAllByExactIndexEntry($this->getModelClassField(),get_class($this),$limit,$this->indexName());
     }
 
     /**
@@ -307,13 +455,13 @@ class ENeo4jNode extends ENeo4jPropertyContainer
 
     /**
      * Add a relationship to another node
-     * @param ENeo4jNode $node The node object to connect with (will be the endNode of the relationship)
+     * @param mixed $node Either a node object to connect with or a node id which represents the endNode of this relationship
      * @param string $type The type of this relationship. something like 'HAS_NAME'. If this is the name of an existing relationship class this class will be instantiated, if not ENeo4jRelationship will be used
      * @param array $properties An array of properties used for the relationship. e.g.: array('since'=>'2010')
      *
      * @return ENeo4jRelationship
      */
-    public function addRelationshipTo(ENeo4jNode $node, $type, array $properties=null)
+    public function addRelationshipTo($node, $type, array $properties=null)
     {
         Yii::trace(
             get_class($this).'.addRelationshipTo()',

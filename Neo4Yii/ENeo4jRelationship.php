@@ -10,8 +10,8 @@
  */
 class ENeo4jRelationship extends ENeo4jPropertyContainer
 {
-    private $_startNode; //a container for the startNode object
-    private $_endNode; //a container for the endNode object
+    private $_startNode; //a container for the startNode object or the startNode id
+    private $_endNode; //a container for the endNode object or the endNode id
     private $_type;
 
     public static function model($className=__CLASS__)
@@ -60,9 +60,12 @@ class ENeo4jRelationship extends ENeo4jPropertyContainer
             throw new ENeo4jException('The relationship cannot be inserted because it is not new.',500);
 
         //check if one of the vital infos isn't there
-        if($this->endNode->self==null || $this->_type==null || $this->startNode==null)
+        if($this->_endNode==null || $this->_type==null || $this->_startNode==null)
             throw new ENeo4jException('You cannot save a relationship without defining type, startNode and endNode',500);
 
+        $startNodeId=$this->_startNode instanceOf ENeo4jNode ? $this->_startNode->id : $this->_startNode;
+        $endNodeId=$this->_endNode instanceOf ENeo4jNode ? $this->_endNode->id : $this->_endNode;
+        
         if($this->beforeSave())
         {
             Yii::trace(get_class($this).'.create()','ext.Neo4Yii.ENeo4jRelationship');
@@ -71,16 +74,16 @@ class ENeo4jRelationship extends ENeo4jPropertyContainer
             
             if(!empty($attributesToSend))
             {
-                $response=$this->postRequest($this->getSite().'/node/'.$this->startNode->getId().'/relationships',array(),array(
-                    'to'=>$this->endNode->getId(),
+                $response=$this->postRequest($this->getSite().'/node/'.$startNodeId.'/relationships',array(),array(
+                    'to'=>$this->getSite().'/'.$endNodeId,
                     'type'=>$this->_type,
                     'data'=>$attributesToSend
                 ));
             }
             else
             {
-                $response=$this->postRequest($this->getSite().'/node/'.$this->startNode->getId().'/relationships',array(),array(
-                    'to'=>$this->endNode->getId(),
+                $response=$this->postRequest($this->getSite().'/node/'.$startNodeId.'/relationships',array(),array(
+                    'to'=>$this->getSite().'/'.$endNodeId,
                     'type'=>$this->_type,
                 ));
             }
@@ -113,7 +116,9 @@ class ENeo4jRelationship extends ENeo4jPropertyContainer
     {
         Yii::trace(get_class($this).'.findById()','ext.Neo4Yii.ENeo4jRelationship');
         $gremlinQuery=new EGremlinScript;
-        $gremlinQuery->setQuery('g.e('.$id.')._().filter{it.getLabel()=="'.get_class($this).'"}');
+        $gremlinQuery->setQuery('g.e(startEdge)._().filter{it.getLabel()==label}');
+        $gremlinQuery->setParam('startEdge',(int)$id);
+        $gremlinQuery->setParam('label',get_class($this));
         $response=$this->query($gremlinQuery);
         $responseData=$response->getData();
         if(isset($responseData[0]))
@@ -126,37 +131,41 @@ class ENeo4jRelationship extends ENeo4jPropertyContainer
     }
 
     /**
-     * Finds all models of the named class via gremlin iterator g.E
+     * Finds all models of the named class via a gremlin iterator g.E filtering on the modelclass attribute
+     * @param int $limit Limit the number of results. Defaults to 100
      * @return array An array of model objects, empty if none are found
      */
-    public function findAll()
+    public function findAll($limit=100)
     {
         Yii::trace(get_class($this).'.findAll()','ext.Neo4Yii.ENeo4jRelationship');
+        
         $gremlinQuery=new EGremlinScript;
-
-        $gremlinQuery->setQuery('g.E._().filter{it.getLabel()=="'.get_class($this).'"}');
+        if(is_integer($limit))
+            $gremlinQuery->setQuery('g.E._().filter{it.getLabel()=="'.get_class($this).'"}[0..'.$limit.']');
+        else
+            $gremlinQuery->setQuery('g.E._().filter{it.getLabel()=="'.get_class($this).'"}');
         if (__CLASS__ === get_class($this)) {
             $gremlinQuery->setQuery('g.E._()');
         }
         $responseData=$this->query($gremlinQuery)->getData();
 
-        return self::model()->populateRecords($responseData);
+        return self::model()->populateRecords($responseData);        
     }
 
     /**
-     * Setter for the startNode object
-     * @param ENeo4jNode $node
+     * Setter for the startNode
+     * @param mixed $node Either a node id or a ENeo4jNode model
      */
-    public function setStartNode(ENeo4jNode $node)
+    public function setStartNode($node)
     {
         $this->_startNode=$node;
     }
 
     /**
-     * Setter for the endNode object
-     * @param ENeo4jNode $node
+     * Setter for the endNode
+     * @param mixed $node Either a node id or a ENeo4jNode model
      */
-    public function setEndNode(ENeo4jNode $node)
+    public function setEndNode($node)
     {
         $this->_endNode=$node;
     }
@@ -167,7 +176,7 @@ class ENeo4jRelationship extends ENeo4jPropertyContainer
      */
     public function getStartNode()
     {
-        if(isset($this->_startNode))
+        if(isset($this->_startNode) && $this->_startNode instanceof ENeo4jNode)
             return $this->_startNode;
         else
         {
@@ -188,7 +197,7 @@ class ENeo4jRelationship extends ENeo4jPropertyContainer
      */
     public function getEndNode()
     {
-        if(isset($this->_endNode))
+        if(isset($this->_endNode) && $this->_endNode instanceof ENeo4jNode)
             return $this->_endNode;
         else
         {
@@ -210,7 +219,7 @@ class ENeo4jRelationship extends ENeo4jPropertyContainer
      */
     private function getFilterByAttributes(&$attributes)
     {
-        Yii::trace(get_class($this).'.getFilterByAttributes()','ext.Neo4Yii.ENeo4jNode');
+        Yii::trace(get_class($this).'.getFilterByAttributes()','ext.Neo4Yii.ENeo4jRelationship');
         $filter = "";
         foreach($attributes as $key=>$value) {
             if(!is_int($value)) {
@@ -229,7 +238,7 @@ class ENeo4jRelationship extends ENeo4jPropertyContainer
      */
     public function findByAttributes($attributes)
     {
-        Yii::trace(get_class($this).'.findByAttributes()','ext.Neo4Yii.ENeo4jNode');
+        Yii::trace(get_class($this).'.findByAttributes()','ext.Neo4Yii.ENeo4jRelationship');
         $gremlinQuery=new EGremlinScript;
 
         $gremlinQuery->setQuery('g.E' . $this->getFilterByAttributes($attributes) .
@@ -250,7 +259,7 @@ class ENeo4jRelationship extends ENeo4jPropertyContainer
      */
     public function findAllByAttributes($attributes)
     {
-        Yii::trace(get_class($this).'.findAllByAttributes()','ext.Neo4Yii.ENeo4jNode');
+        Yii::trace(get_class($this).'.findAllByAttributes()','ext.Neo4Yii.ENeo4jRelationship');
         $gremlinQuery=new EGremlinScript;
 
         $gremlinQuery->setQuery('g.E' . $this->getFilterByAttributes($attributes) .
@@ -258,6 +267,111 @@ class ENeo4jRelationship extends ENeo4jPropertyContainer
         $responseData=$this->query($gremlinQuery)->getData();
 
         return self::model()->populateRecords($responseData);
+    }
+    
+    /**
+     * Finds a single relationship exactly matching the supplied key=>value pair. If no index name is supplied the index defined
+     * via ENeo4jPropertyContainer::indexName() will be used which matches the classname of the node.
+     * @param string $key The key
+     * @param string $value The value
+     * @param string $index Optional index name. If null the default index will be used
+     * @return ENeo4jRelationship The resulting node, or null if none was found 
+     */
+    public function findByExactIndexEntry($key,$value,$index=null)
+    {
+        Yii::trace(get_class($this).'.findByExactIndexEntry()','ext.Neo4Yii.ENeo4jRelationship');
+        if(is_null($index))
+            $index=$this->indexName();
+        $query=new EGremlinScript;
+        $query->setQuery(
+                'import org.neo4j.graphdb.index.*
+                import org.neo4j.graphdb.*
+                neo4j = g.getRawGraph()
+                idxManager = neo4j.index()
+                index = idxManager.forRelationships("'.$index.'")
+                ArrayList<Relationship> results = new ArrayList<Relationship>();
+                int count = 0;
+                for ( Relationship rel : index.query("'.$this->getModelClassField().':'.get_class($this).' AND '.$key.':'.$value.'") )
+                {
+                    count++;
+                    results.add( rel );
+                    if ( count >= 1 ) break;
+                }
+                return results[0];'
+                
+                );
+        $responseData=$this->query($query)->getData();
+        
+        return ENeo4jRelationship::model()->populateRecord($responseData);
+    }
+    
+    /**
+     * Finds all nodes exactly matching the supplied key=>value pair. If no index name is supplied the index defined
+     * via ENeo4jPropertyContainer::indexName() will be used which matches the classname of the node.
+     * @param string $key The key
+     * @param string $value The value
+     * @param int $limit Limit the number of returned results. Defaults to 20
+     * @param string $index Optional index name. If null the default index will be used
+     * @return array An array of nodes, or an empty array if none were found 
+     */
+    public function findAllByExactIndexEntry($key,$value,$limit=20,$index=null)
+    {
+        Yii::trace(get_class($this).'.findAllByExactIndexEntry()','ext.Neo4Yii.ENeo4jRelationship');
+        if(is_null($index))
+            $index=$this->indexName();
+        
+        $query=new EGremlinScript;
+        $query->setQuery(
+                'import org.neo4j.graphdb.index.*
+                import org.neo4j.graphdb.*
+                neo4j = g.getRawGraph()
+                idxManager = neo4j.index()
+                index = idxManager.forRelationships("'.$index.'")
+                ArrayList<Relationship> results = new ArrayList<Relationship>();
+                int count = 0;
+                for ( Relationship rel : index.query("'.$this->getModelClassField().':'.get_class($this).' AND '.$key.':'.$value.'") )
+                {
+                    count++;
+                    results.add( rel );
+                    if ( count >= '.(int)$limit.' ) break;
+                }
+                return results;'
+                );
+        $responseData=$this->query($query)->getData();
+        
+        return ENeo4jRelationship::model()->populateRecords($responseData);
+    }
+    
+    
+    /**
+     * Finds relationships according to a lucene query
+     * @param string $indexQuery The query
+     * @param int $limit Limit the number of results. Defaults to 20
+     * @param string $index Optional name of the index to be used for searching. Defaults to the index defined via
+     * indexName()
+     * @return array An array of resulting nodes or empty array if no results were found
+     */
+    public function findByIndexQuery($indexQuery,$limit=20,$index=null)
+    {
+        Yii::trace(get_class($this).'.findByIndexQuery()','ext.Neo4Yii.ENeo4jRelationship');
+       if(is_null($index))
+            $index=$this->indexName();
+        
+        $query=new EGremlinScript;
+        $query->setQuery(
+                'import org.neo4j.graphdb.index.*
+                import org.neo4j.graphdb.*
+                import org.neo4j.index.lucene.*
+                import org.apache.lucene.search.*
+                neo4j = g.getRawGraph()
+                idxManager = neo4j.index()
+                index = idxManager.forRelationships("'.$index.'")
+                query = new QueryContext("'.$indexQuery.'").top('.(int)$limit.')
+                results = index.query(query)');
+        
+        $responseData=$this->query($query)->getData();
+        
+        return ENeo4jRelationship::model()->populateRecords($responseData);
     }
 
 }
